@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { useToast } from "@/components/ui/use-toast";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2ZmZ8y399YYyvUHWaKOux3tgAV4T6OLg",
@@ -20,14 +21,26 @@ const provider = new GoogleAuthProvider();
 
 export const LoginForm = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
       console.log("Utilisateur connecté:", result.user);
       navigate("/profile");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur de connexion:", error);
+      
+      let errorMessage = "Une erreur est survenue lors de la connexion.";
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "Ce domaine n'est pas autorisé pour la connexion. Veuillez contacter l'administrateur.";
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "Erreur de connexion",
+        description: errorMessage,
+      });
     }
   };
 

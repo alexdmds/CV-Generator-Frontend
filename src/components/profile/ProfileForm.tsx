@@ -6,19 +6,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileText, Upload, Camera, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 export const ProfileForm = () => {
   const [profilePic, setProfilePic] = useState<File | null>(null);
+  const [profilePicUrl, setProfilePicUrl] = useState<string>("");
   const [cvFiles, setCvFiles] = useState<File[]>([]);
   const { toast } = useToast();
+  const auth = getAuth();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setProfilePic(e.target.files[0]);
-      toast({
-        title: "Photo mise à jour",
-        description: "Votre photo de profil a été changée avec succès.",
-      });
+      const file = e.target.files[0];
+      setProfilePic(file);
+      
+      try {
+        const storage = getStorage();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          toast({
+            title: "Erreur",
+            description: "Vous devez être connecté pour upload une photo.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Création du chemin de stockage
+        const storageRef = ref(storage, `${user.uid}/profil/photo.jpg`);
+        
+        // Upload du fichier
+        await uploadBytes(storageRef, file);
+        
+        // Récupération de l'URL
+        const downloadURL = await getDownloadURL(storageRef);
+        setProfilePicUrl(downloadURL);
+        
+        toast({
+          title: "Photo mise à jour",
+          description: "Votre photo de profil a été changée avec succès.",
+        });
+      } catch (error) {
+        console.error("Erreur lors de l'upload:", error);
+        toast({
+          title: "Erreur",
+          description: "Une erreur est survenue lors de l'upload de la photo.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -59,7 +96,7 @@ export const ProfileForm = () => {
           <div className="flex justify-center">
             <Avatar className="w-24 h-24">
               <AvatarImage 
-                src={profilePic ? URL.createObjectURL(profilePic) : ""} 
+                src={profilePicUrl || (profilePic ? URL.createObjectURL(profilePic) : "")} 
                 alt="Photo de profil" 
               />
               <AvatarFallback>

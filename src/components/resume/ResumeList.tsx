@@ -18,7 +18,7 @@ export const ResumeList = () => {
   const [resumes, setResumes] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const storage = getStorage();
+  const storage = getStorage(undefined, 'gs://cv-generator-447314.appspot.com');
   const auth = getAuth();
 
   const handleResumeClick = async (resumeId?: string) => {
@@ -36,7 +36,6 @@ export const ResumeList = () => {
     if (resumeId) {
       navigate(`/resumes/${resumeId}`);
     } else {
-      // Create a new CV folder with a placeholder file
       const newCvName = `CV_${Date.now()}`;
       try {
         const placeholderPath = `${user.uid}/cvs/${newCvName}/placeholder.txt`;
@@ -78,19 +77,21 @@ export const ResumeList = () => {
         try {
           const result = await listAll(cvFolderRef);
           console.log("List result:", result);
-
-          // Get unique CV names from prefixes
+          
           const resumeNames = result.prefixes.map(prefix => prefix.name);
           console.log("CV folders found:", resumeNames);
           
-          setResumes(resumeNames);
-
           if (resumeNames.length === 0) {
-            console.log("No CVs found for user:", user.uid);
+            // Create initial placeholder file to initialize the cvs folder
+            const placeholderPath = `${user.uid}/cvs/placeholder.txt`;
+            const placeholderRef = ref(storage, placeholderPath);
+            await uploadString(placeholderRef, "placeholder content");
           }
+          
+          setResumes(resumeNames);
         } catch (listError) {
           console.error("Error listing CVs:", listError);
-          // If the folder doesn't exist yet, create it with a placeholder
+          // Initialize the cvs folder with a placeholder
           const placeholderPath = `${user.uid}/cvs/placeholder.txt`;
           const placeholderRef = ref(storage, placeholderPath);
           await uploadString(placeholderRef, "placeholder content");

@@ -10,17 +10,24 @@ import {
 import { useEffect, useState } from "react";
 import { FileText, PlusCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export const ResumeList = () => {
   const [resumes, setResumes] = useState<string[]>([]);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const createNewResume = () => {
-    toast({
-      title: "Création d'un nouveau CV",
-      description: "Votre nouveau CV va être créé...",
-    });
-    // TODO: Implement CV creation logic
+  const handleResumeClick = (resumeId?: string) => {
+    if (resumeId) {
+      navigate(`/resumes/${resumeId}`);
+    } else {
+      // Create new resume
+      toast({
+        title: "Création d'un nouveau CV",
+        description: "Votre nouveau CV va être créé...",
+      });
+      navigate("/resumes/new");
+    }
   };
 
   useEffect(() => {
@@ -56,19 +63,22 @@ export const ResumeList = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             {resumes.length === 0 ? (
-              <DropdownMenuItem onClick={createNewResume}>
+              <DropdownMenuItem onClick={() => handleResumeClick()}>
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Créer mon premier CV
               </DropdownMenuItem>
             ) : (
               <>
                 {resumes.map((resume) => (
-                  <DropdownMenuItem key={resume}>
+                  <DropdownMenuItem
+                    key={resume}
+                    onClick={() => handleResumeClick(resume)}
+                  >
                     <FileText className="w-4 h-4 mr-2" />
                     {resume}
                   </DropdownMenuItem>
                 ))}
-                <DropdownMenuItem onClick={createNewResume}>
+                <DropdownMenuItem onClick={() => handleResumeClick()}>
                   <PlusCircle className="w-4 h-4 mr-2" />
                   Nouveau CV
                 </DropdownMenuItem>
@@ -79,14 +89,21 @@ export const ResumeList = () => {
       </CardHeader>
       <CardContent>
         {resumes.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div 
+            className="text-center py-8 text-gray-500 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => handleResumeClick()}
+          >
             <FileText className="w-12 h-12 mx-auto mb-4" />
             <p>Vous n'avez pas encore de CV. Créez-en un nouveau !</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {resumes.map((resume) => (
-              <Card key={resume} className="cursor-pointer hover:bg-gray-50">
+              <Card 
+                key={resume} 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleResumeClick(resume)}
+              >
                 <CardContent className="flex items-center gap-4 p-4">
                   <FileText className="w-8 h-8 text-gray-500" />
                   <div>

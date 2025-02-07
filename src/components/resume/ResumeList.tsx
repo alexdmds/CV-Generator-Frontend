@@ -17,7 +17,7 @@ export const ResumeList = () => {
   const [resumes, setResumes] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const storage = getStorage();
+  const storage = getStorage(undefined, 'gs://cv-generator-447314.appspot.com');
 
   const handleResumeClick = (resumeId?: string) => {
     if (resumeId) {

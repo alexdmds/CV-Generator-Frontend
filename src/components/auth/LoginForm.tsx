@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInAnonymously } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useToast } from "@/components/ui/use-toast";
 
 const firebaseConfig = {
@@ -11,7 +11,7 @@ const firebaseConfig = {
   authDomain: "cv-generator-447314.firebaseapp.com",
   databaseURL: "https://cv-generator-447314-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "cv-generator-447314",
-  storageBucket: "cv-generator-447314.firebasestorage.app",
+  storageBucket: "cv-generator-447314.appspot.com",
   messagingSenderId: "177360827241",
   appId: "1:177360827241:web:2eccbab9c11777f27203f8"
 };
@@ -29,9 +29,14 @@ export const LoginForm = () => {
   const handleGoogleSignIn = async () => {
     try {
       if (isDevelopment) {
-        // En développement, utiliser l'authentification anonyme
-        const result = await signInAnonymously(auth);
-        console.log("Mode développement : Utilisateur anonyme connecté", result.user);
+        // En développement, on simule un utilisateur connecté localement
+        console.log("Mode développement : Simulation d'un utilisateur local");
+        // On stocke les infos de l'utilisateur mock dans le localStorage
+        localStorage.setItem('mockUser', JSON.stringify({
+          uid: 'mock-user-123',
+          email: 'mock@example.com',
+          displayName: 'Utilisateur Test'
+        }));
         navigate("/profile");
         return;
       }

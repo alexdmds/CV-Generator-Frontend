@@ -4,27 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FileText, Upload, Camera } from "lucide-react";
+import { FileText, Upload, Camera, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export const ProfileForm = () => {
-  const [name, setName] = useState("");
-  const [title, setTitle] = useState("");
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [cvFiles, setCvFiles] = useState<File[]>([]);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Profil mis à jour",
-      description: "Vos informations ont été sauvegardées avec succès.",
-    });
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setProfilePic(e.target.files[0]);
+      toast({
+        title: "Photo mise à jour",
+        description: "Votre photo de profil a été changée avec succès.",
+      });
     }
   };
 
@@ -39,12 +33,20 @@ export const ProfileForm = () => {
     }
   };
 
+  const handleDeleteCV = (index: number) => {
+    setCvFiles((prev) => prev.filter((_, i) => i !== index));
+    toast({
+      title: "CV supprimé",
+      description: "Le document a été supprimé avec succès.",
+    });
+  };
+
   const handleGenerateCV = () => {
     toast({
-      title: "Génération du CV",
-      description: "La génération de votre CV va commencer...",
+      title: "Génération du profil",
+      description: "La génération de votre profil va commencer...",
     });
-    // TODO: Implémenter la génération du CV
+    // TODO: Implémenter la génération du profil
   };
 
   return (
@@ -53,7 +55,7 @@ export const ProfileForm = () => {
         <CardTitle className="text-2xl font-bold">Mon Profil</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           <div className="flex justify-center">
             <Avatar className="w-24 h-24">
               <AvatarImage 
@@ -84,19 +86,6 @@ export const ProfileForm = () => {
             </Button>
           </div>
 
-          <div className="space-y-4">
-            <Input
-              placeholder="Nom complet"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Input
-              placeholder="Titre professionnel"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
           <div className="space-y-2">
             <p className="text-sm font-medium">Mes anciens CV</p>
             <Input
@@ -122,32 +111,36 @@ export const ProfileForm = () => {
                 {cvFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center p-2 bg-gray-50 rounded-md"
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
                   >
-                    <FileText className="mr-2 text-gray-500" />
-                    <span className="text-sm">{file.name}</span>
+                    <div className="flex items-center">
+                      <FileText className="mr-2 text-gray-500" />
+                      <span className="text-sm">{file.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteCV(index)}
+                      className="hover:text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="space-y-4">
-            <Button
-              type="button"
-              onClick={handleGenerateCV}
-              className="w-full"
-              variant="secondary"
-            >
-              <FileText className="mr-2" />
-              Générer mon CV
-            </Button>
-
-            <Button type="submit" className="w-full">
-              Sauvegarder
-            </Button>
-          </div>
-        </form>
+          <Button
+            type="button"
+            onClick={handleGenerateCV}
+            className="w-full"
+            variant="default"
+          >
+            <FileText className="mr-2" />
+            Générer mon profil
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

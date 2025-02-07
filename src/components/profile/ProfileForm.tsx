@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileText, Upload, Camera, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from "firebase/storage";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll, getMetadata } from "firebase/storage";
 import { getAuth } from "firebase/auth";
+import { format } from "date-fns";
 
 export const ProfileForm = () => {
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [profilePicUrl, setProfilePicUrl] = useState<string>("");
   const [cvFiles, setCvFiles] = useState<{name: string, url: string}[]>([]);
+  const [lastGeneratedDate, setLastGeneratedDate] = useState<Date | null>(null);
   const { toast } = useToast();
   const auth = getAuth();
   
@@ -54,12 +57,30 @@ export const ProfileForm = () => {
           
           setCvFiles(filesData);
         } catch (error) {
-          console.log("Pas de CVs existants");
+          console.log("Pas de documents existants");
         }
       }
     };
 
     loadCVs();
+  }, [auth.currentUser, storage]);
+
+  useEffect(() => {
+    const checkLastGeneration = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const expRef = ref(storage, `${user.uid}/profil/exp.json`);
+          const metadata = await getMetadata(expRef);
+          setLastGeneratedDate(new Date(metadata.updated));
+        } catch (error) {
+          console.log("Pas de profil généré");
+          setLastGeneratedDate(null);
+        }
+      }
+    };
+
+    checkLastGeneration();
   }, [auth.currentUser, storage]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,6 +232,11 @@ export const ProfileForm = () => {
     <Card className="w-full max-w-2xl mx-auto animate-fadeIn">
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Mon Profil</CardTitle>
+        {lastGeneratedDate && (
+          <p className="text-sm text-muted-foreground">
+            Dernière génération le {format(lastGeneratedDate, "dd/MM/yyyy 'à' HH:mm")}
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-6">

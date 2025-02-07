@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,24 @@ export const ProfileForm = () => {
   
   // Initialisation du storage avec le bon bucket
   const storage = getStorage(undefined, 'gs://cv-generator-447314.firebasestorage.app');
+
+  // Chargement initial de la photo de profil
+  useEffect(() => {
+    const loadProfilePic = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const photoRef = ref(storage, `${user.uid}/profil/photo.jpg`);
+          const url = await getDownloadURL(photoRef);
+          setProfilePicUrl(url);
+        } catch (error) {
+          console.log("Pas de photo de profil existante");
+        }
+      }
+    };
+
+    loadProfilePic();
+  }, [auth.currentUser, storage]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,7 +63,7 @@ export const ProfileForm = () => {
           }
         };
 
-        const storageRef = ref(storage, `${user.uid}/profil/${Date.now()}-${file.name}`);
+        const storageRef = ref(storage, `${user.uid}/profil/photo.jpg`);
         
         await uploadBytes(storageRef, file, metadata);
         const downloadURL = await getDownloadURL(storageRef);

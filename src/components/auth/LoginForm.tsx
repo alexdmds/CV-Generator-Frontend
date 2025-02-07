@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -19,12 +20,28 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+const isDevelopment = import.meta.env.DEV;
+
 export const LoginForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleGoogleSignIn = async () => {
     try {
+      if (isDevelopment) {
+        // En développement, simuler un utilisateur connecté
+        console.log("Mode développement : Simulation de connexion");
+        const mockUser = {
+          uid: "mock-uid",
+          email: "mock@example.com",
+          displayName: "Utilisateur Test"
+        };
+        localStorage.setItem("mockUser", JSON.stringify(mockUser));
+        navigate("/profile");
+        return;
+      }
+
+      // En production, utiliser l'authentification Firebase réelle
       const result = await signInWithPopup(auth, provider);
       console.log("Utilisateur connecté:", result.user);
       navigate("/profile");
@@ -47,7 +64,9 @@ export const LoginForm = () => {
   return (
     <Card className="w-full max-w-md mx-auto animate-fadeIn">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Connexion</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">
+          {isDevelopment ? "Connexion (Mode Dev)" : "Connexion"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Button
@@ -79,7 +98,7 @@ export const LoginForm = () => {
               fill="#EA4335"
             />
           </svg>
-          Se connecter avec Google
+          Se connecter avec Google {isDevelopment && "(Mode Dev)"}
         </Button>
       </CardContent>
     </Card>

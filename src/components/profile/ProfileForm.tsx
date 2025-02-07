@@ -9,6 +9,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 
+const isDevelopment = import.meta.env.DEV;
+
 export const ProfileForm = () => {
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [profilePicUrl, setProfilePicUrl] = useState<string>("");
@@ -22,6 +24,19 @@ export const ProfileForm = () => {
       setProfilePic(file);
       
       try {
+        if (isDevelopment) {
+          // En mode développement, on simule le stockage avec une URL locale
+          const localUrl = URL.createObjectURL(file);
+          setProfilePicUrl(localUrl);
+          console.log("Mode développement : URL locale créée", localUrl);
+          
+          toast({
+            title: "Photo mise à jour (Mode Dev)",
+            description: "Votre photo de profil a été changée localement.",
+          });
+          return;
+        }
+
         const storage = getStorage();
         const user = auth.currentUser;
         

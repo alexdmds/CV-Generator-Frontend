@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +15,8 @@ export const ProfileForm = () => {
   const { toast } = useToast();
   const auth = getAuth();
   
-  // Initialisation du storage avec le bon bucket
   const storage = getStorage(undefined, 'gs://cv-generator-447314.firebasestorage.app');
 
-  // Chargement initial de la photo de profil
   useEffect(() => {
     const loadProfilePic = async () => {
       const user = auth.currentUser;
@@ -37,7 +34,6 @@ export const ProfileForm = () => {
     loadProfilePic();
   }, [auth.currentUser, storage]);
 
-  // Chargement initial des CVs
   useEffect(() => {
     const loadCVs = async () => {
       const user = auth.currentUser;
@@ -249,7 +245,7 @@ export const ProfileForm = () => {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">Mes anciens CV</p>
+            <p className="text-sm font-medium">Mes documents</p>
             <Input
               type="file"
               accept=".pdf"
@@ -265,7 +261,7 @@ export const ProfileForm = () => {
               className="w-full"
             >
               <Upload className="mr-2" />
-              Ajouter des CV (PDF)
+              Ajouter des documents (PDF)
             </Button>
             
             {cvFiles.length > 0 && (

@@ -12,12 +12,14 @@ import { FileText, PlusCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getStorage, ref, listAll } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 export const ResumeList = () => {
   const [resumes, setResumes] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const storage = getStorage(undefined, 'gs://cv-generator-447314.appspot.com');
+  const storage = getStorage();
+  const auth = getAuth();
 
   const handleResumeClick = (resumeId?: string) => {
     if (resumeId) {
@@ -34,10 +36,18 @@ export const ResumeList = () => {
   useEffect(() => {
     const loadResumes = async () => {
       try {
-        // TODO: Remplacer 'user123' par l'ID de l'utilisateur connecté
-        const userId = 'user123';
-        const cvFolderRef = ref(storage, `${userId}/cvs`);
-        
+        const user = auth.currentUser;
+        if (!user) {
+          toast({
+            title: "Erreur d'authentification",
+            description: "Vous devez être connecté pour voir vos CVs",
+            variant: "destructive",
+          });
+          navigate("/login");
+          return;
+        }
+
+        const cvFolderRef = ref(storage, `${user.uid}/cvs`);
         const result = await listAll(cvFolderRef);
         const resumeNames = result.items.map(item => item.name);
         
@@ -53,7 +63,7 @@ export const ResumeList = () => {
     };
 
     loadResumes();
-  }, [toast, storage]);
+  }, [toast, storage, auth, navigate]);
 
   return (
     <Card className="w-full max-w-4xl mx-auto animate-fadeIn">

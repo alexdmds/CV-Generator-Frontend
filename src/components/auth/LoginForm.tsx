@@ -4,9 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
-// Initialize Firebase (à remplacer avec vos propres configurations)
 const firebaseConfig = {
-  // Les configurations Firebase seront à ajouter ici
+  apiKey: "AIzaSyD2ZmZ8y399YYyvUHWaKOux3tgAV4T6OLg",
+  authDomain: "cv-generator-447314.firebaseapp.com",
+  databaseURL: "https://cv-generator-447314-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "cv-generator-447314",
+  storageBucket: "cv-generator-447314.firebasestorage.app",
+  messagingSenderId: "177360827241",
+  appId: "1:177360827241:web:2eccbab9c11777f27203f8"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -19,7 +24,6 @@ export const LoginForm = () => {
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
-      // L'utilisateur est connecté
       console.log("Utilisateur connecté:", result.user);
       navigate("/profile");
     } catch (error) {

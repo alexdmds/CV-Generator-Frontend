@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { FileText, PlusCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { getStorage, ref, listAll } from "firebase/storage";
+import { getStorage, ref, listAll, uploadString } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export const ResumeList = () => {
@@ -21,15 +21,41 @@ export const ResumeList = () => {
   const storage = getStorage();
   const auth = getAuth();
 
-  const handleResumeClick = (resumeId?: string) => {
+  const handleResumeClick = async (resumeId?: string) => {
+    const user = auth.currentUser;
+    if (!user) {
+      toast({
+        title: "Erreur d'authentification",
+        description: "Vous devez être connecté pour accéder à vos CVs",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
     if (resumeId) {
       navigate(`/resumes/${resumeId}`);
     } else {
-      toast({
-        title: "Création d'un nouveau CV",
-        description: "Votre nouveau CV va être créé...",
-      });
-      navigate("/resumes/new");
+      // Create a new CV folder with a placeholder file
+      const newCvName = `CV_${Date.now()}`;
+      try {
+        const placeholderPath = `${user.uid}/cvs/${newCvName}/placeholder.txt`;
+        const placeholderRef = ref(storage, placeholderPath);
+        await uploadString(placeholderRef, "placeholder content");
+        
+        toast({
+          title: "Création d'un nouveau CV",
+          description: "Votre nouveau CV a été créé",
+        });
+        navigate(`/resumes/${newCvName}`);
+      } catch (error) {
+        console.error("Error creating new CV:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de créer un nouveau CV",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -46,20 +72,32 @@ export const ResumeList = () => {
           return;
         }
 
+        console.log("Loading CVs for user:", user.uid);
         const cvFolderRef = ref(storage, `${user.uid}/cvs`);
-        const result = await listAll(cvFolderRef);
         
-        // Utiliser les préfixes (dossiers) au lieu des items
-        const resumeNames = result.prefixes.map(prefix => prefix.name);
-        console.log("CV folders found:", resumeNames);
-        
-        setResumes(resumeNames);
+        try {
+          const result = await listAll(cvFolderRef);
+          console.log("List result:", result);
 
-        if (resumeNames.length === 0) {
-          console.log("No CVs found for user:", user.uid);
+          // Get unique CV names from prefixes
+          const resumeNames = result.prefixes.map(prefix => prefix.name);
+          console.log("CV folders found:", resumeNames);
+          
+          setResumes(resumeNames);
+
+          if (resumeNames.length === 0) {
+            console.log("No CVs found for user:", user.uid);
+          }
+        } catch (listError) {
+          console.error("Error listing CVs:", listError);
+          // If the folder doesn't exist yet, create it with a placeholder
+          const placeholderPath = `${user.uid}/cvs/placeholder.txt`;
+          const placeholderRef = ref(storage, placeholderPath);
+          await uploadString(placeholderRef, "placeholder content");
+          setResumes([]);
         }
       } catch (error) {
-        console.error("Error loading resumes:", error);
+        console.error("Error in loadResumes:", error);
         toast({
           title: "Erreur",
           description: "Impossible de charger vos CVs",

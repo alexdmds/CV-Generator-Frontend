@@ -45,7 +45,7 @@ export const ProfileForm = () => {
           }
         };
 
-        const storageRef = ref(storage, `users/${user.uid}/profile/${Date.now()}-${file.name}`);
+        const storageRef = ref(storage, `${user.uid}/profil/${Date.now()}-${file.name}`);
         
         await uploadBytes(storageRef, file, metadata);
         const downloadURL = await getDownloadURL(storageRef);

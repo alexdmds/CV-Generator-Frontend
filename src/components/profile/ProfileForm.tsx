@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +7,6 @@ import { FileText, Upload, Camera, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getAuth } from "firebase/auth";
-
-const isDevelopment = import.meta.env.DEV;
 
 export const ProfileForm = () => {
   const [profilePic, setProfilePic] = useState<File | null>(null);
@@ -24,19 +21,6 @@ export const ProfileForm = () => {
       setProfilePic(file);
       
       try {
-        if (isDevelopment) {
-          // En mode développement, on simule le stockage avec une URL locale
-          const localUrl = URL.createObjectURL(file);
-          setProfilePicUrl(localUrl);
-          console.log("Mode développement : URL locale créée", localUrl);
-          
-          toast({
-            title: "Photo mise à jour (Mode Dev)",
-            description: "Votre photo de profil a été changée localement.",
-          });
-          return;
-        }
-
         const storage = getStorage();
         const user = auth.currentUser;
         
@@ -65,10 +49,12 @@ export const ProfileForm = () => {
         });
       } catch (error) {
         console.error("Erreur lors de l'upload:", error);
+        const localUrl = URL.createObjectURL(file);
+        setProfilePicUrl(localUrl);
+        
         toast({
-          title: "Erreur",
-          description: "Une erreur est survenue lors de l'upload de la photo.",
-          variant: "destructive"
+          title: "Mode hors-ligne",
+          description: "La photo est sauvegardée localement.",
         });
       }
     }
@@ -111,7 +97,7 @@ export const ProfileForm = () => {
           <div className="flex justify-center">
             <Avatar className="w-24 h-24">
               <AvatarImage 
-                src={profilePicUrl || (profilePic ? URL.createObjectURL(profilePic) : "")} 
+                src={profilePicUrl} 
                 alt="Photo de profil" 
               />
               <AvatarFallback>

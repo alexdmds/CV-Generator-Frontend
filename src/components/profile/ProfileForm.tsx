@@ -38,10 +38,12 @@ export const ProfileForm = () => {
           customMetadata: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'origin': window.location.origin
+            'origin': 'https://auto-cv-creator.lovable.app'
           }
         };
 
+        // Utilisation du bon nom de bucket
+        const storage = getStorage(undefined, 'gs://cv-generator-447314.firebasestorage.app');
         const storageRef = ref(storage, `users/${user.uid}/profile/${Date.now()}-${file.name}`);
         
         await uploadBytes(storageRef, file, metadata);

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,9 @@ export const ProfileForm = () => {
   const [cvFiles, setCvFiles] = useState<File[]>([]);
   const { toast } = useToast();
   const auth = getAuth();
+  
+  // Initialisation du storage avec le bon bucket
+  const storage = getStorage(undefined, 'gs://cv-generator-447314.firebasestorage.app');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -21,7 +25,6 @@ export const ProfileForm = () => {
       setProfilePic(file);
       
       try {
-        const storage = getStorage();
         const user = auth.currentUser;
         
         if (!user) {
@@ -42,8 +45,6 @@ export const ProfileForm = () => {
           }
         };
 
-        // Utilisation du bon nom de bucket
-        const storage = getStorage(undefined, 'gs://cv-generator-447314.firebasestorage.app');
         const storageRef = ref(storage, `users/${user.uid}/profile/${Date.now()}-${file.name}`);
         
         await uploadBytes(storageRef, file, metadata);

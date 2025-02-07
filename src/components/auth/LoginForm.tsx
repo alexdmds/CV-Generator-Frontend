@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import { useToast } from "@/components/ui/use-toast";
 
 const firebaseConfig = {
@@ -29,14 +29,14 @@ export const LoginForm = () => {
   const handleGoogleSignIn = async () => {
     try {
       if (isDevelopment) {
-        // En développement, simuler un utilisateur connecté
-        console.log("Mode développement : Simulation de connexion");
-        const mockUser = {
-          uid: "mock-uid",
-          email: "mock@example.com",
-          displayName: "Utilisateur Test"
-        };
-        localStorage.setItem("mockUser", JSON.stringify(mockUser));
+        // En développement, on crée un credential mock mais valide pour Firebase
+        const mockCredential = GoogleAuthProvider.credential(
+          '{"sub": "mock-uid", "email": "mock@example.com", "name": "Utilisateur Test"}'
+        );
+        
+        // On se connecte avec ce credential
+        await signInWithCredential(auth, mockCredential);
+        console.log("Mode développement : Utilisateur mock connecté à Firebase");
         navigate("/profile");
         return;
       }

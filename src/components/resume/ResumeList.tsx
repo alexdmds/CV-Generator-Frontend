@@ -11,17 +11,18 @@ import { useEffect, useState } from "react";
 import { FileText, PlusCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { getStorage, ref, listAll } from "firebase/storage";
 
 export const ResumeList = () => {
   const [resumes, setResumes] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const storage = getStorage();
 
   const handleResumeClick = (resumeId?: string) => {
     if (resumeId) {
       navigate(`/resumes/${resumeId}`);
     } else {
-      // Create new resume
       toast({
         title: "Création d'un nouveau CV",
         description: "Votre nouveau CV va être créé...",
@@ -33,9 +34,14 @@ export const ResumeList = () => {
   useEffect(() => {
     const loadResumes = async () => {
       try {
-        // TODO: Implement resume loading logic
-        // This will be implemented when we have the backend setup
-        setResumes([]);
+        // TODO: Remplacer 'user123' par l'ID de l'utilisateur connecté
+        const userId = 'user123';
+        const cvFolderRef = ref(storage, `${userId}/cvs`);
+        
+        const result = await listAll(cvFolderRef);
+        const resumeNames = result.items.map(item => item.name);
+        
+        setResumes(resumeNames);
       } catch (error) {
         console.error("Error loading resumes:", error);
         toast({
@@ -47,7 +53,7 @@ export const ResumeList = () => {
     };
 
     loadResumes();
-  }, [toast]);
+  }, [toast, storage]);
 
   return (
     <Card className="w-full max-w-4xl mx-auto animate-fadeIn">

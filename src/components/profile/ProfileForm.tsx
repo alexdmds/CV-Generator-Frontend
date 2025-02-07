@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,22 +33,21 @@ export const ProfileForm = () => {
           return;
         }
 
-        // Configuration spécifique pour votre bucket
-        const storageRef = ref(storage, `users/${user.uid}/profile/photo.jpg`);
-        
-        // Upload avec metadata pour CORS
         const metadata = {
-          contentType: 'image/jpeg',
+          contentType: file.type,
           customMetadata: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'origin': window.location.origin
           }
         };
+
+        const storageRef = ref(storage, `users/${user.uid}/profile/${Date.now()}-${file.name}`);
         
-        // Upload du fichier avec metadata
         await uploadBytes(storageRef, file, metadata);
-        
-        // Récupération de l'URL avec token
         const downloadURL = await getDownloadURL(storageRef);
+        
+        console.log("Upload réussi, URL:", downloadURL);
         setProfilePicUrl(downloadURL);
         
         toast({
@@ -57,7 +55,6 @@ export const ProfileForm = () => {
           description: "Votre photo de profil a été changée avec succès.",
         });
 
-        console.log("Upload réussi, URL:", downloadURL);
       } catch (error) {
         console.error("Erreur lors de l'upload:", error);
         const localUrl = URL.createObjectURL(file);

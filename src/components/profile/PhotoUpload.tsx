@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,7 +80,7 @@ export const PhotoUpload = () => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadProfilePic();
   }, [auth.currentUser]);
 

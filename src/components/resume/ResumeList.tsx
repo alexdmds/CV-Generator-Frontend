@@ -12,7 +12,7 @@ import { FileText, PlusCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getStorage, ref, listAll } from "firebase/storage";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export const ResumeList = () => {
   const [resumes, setResumes] = useState<string[]>([]);
@@ -34,9 +34,8 @@ export const ResumeList = () => {
   };
 
   useEffect(() => {
-    const loadResumes = async () => {
+    const loadResumes = async (user: any) => {
       try {
-        const user = auth.currentUser;
         if (!user) {
           toast({
             title: "Erreur d'authentification",
@@ -49,9 +48,16 @@ export const ResumeList = () => {
 
         const cvFolderRef = ref(storage, `${user.uid}/cvs`);
         const result = await listAll(cvFolderRef);
-        const resumeNames = result.items.map(item => item.name);
+        
+        // Utiliser les préfixes (dossiers) au lieu des items
+        const resumeNames = result.prefixes.map(prefix => prefix.name);
+        console.log("CV folders found:", resumeNames);
         
         setResumes(resumeNames);
+
+        if (resumeNames.length === 0) {
+          console.log("No CVs found for user:", user.uid);
+        }
       } catch (error) {
         console.error("Error loading resumes:", error);
         toast({
@@ -62,7 +68,16 @@ export const ResumeList = () => {
       }
     };
 
-    loadResumes();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("Auth state changed. User:", user?.uid);
+      if (user) {
+        loadResumes(user);
+      } else {
+        navigate("/login");
+      }
+    });
+
+    return () => unsubscribe();
   }, [toast, storage, auth, navigate]);
 
   return (

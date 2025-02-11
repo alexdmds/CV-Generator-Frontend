@@ -20,28 +20,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-const isDevelopment = import.meta.env.DEV;
-
 export const LoginForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleGoogleSignIn = async () => {
     try {
-      if (isDevelopment) {
-        // En développement, on simule un utilisateur connecté localement
-        console.log("Mode développement : Simulation d'un utilisateur local");
-        // On stocke les infos de l'utilisateur mock dans le localStorage
-        localStorage.setItem('mockUser', JSON.stringify({
-          uid: 'mock-user-123',
-          email: 'mock@example.com',
-          displayName: 'Utilisateur Test'
-        }));
-        navigate("/profile");
-        return;
-      }
-
-      // En production, utiliser l'authentification Firebase réelle
       const result = await signInWithPopup(auth, provider);
       console.log("Utilisateur connecté:", result.user);
       navigate("/profile");
@@ -65,7 +49,7 @@ export const LoginForm = () => {
     <Card className="w-full max-w-md mx-auto animate-fadeIn">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">
-          {isDevelopment ? "Connexion (Mode Dev)" : "Connexion"}
+          Connexion
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -98,7 +82,7 @@ export const LoginForm = () => {
               fill="#EA4335"
             />
           </svg>
-          Se connecter avec Google {isDevelopment && "(Mode Dev)"}
+          Se connecter avec Google
         </Button>
       </CardContent>
     </Card>

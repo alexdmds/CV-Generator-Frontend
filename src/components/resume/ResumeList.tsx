@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
@@ -136,8 +137,8 @@ export const ResumeList = () => {
       // Copier tous les fichiers vers le nouveau dossier
       await Promise.all(files.items.map(async (fileRef) => {
         const newFileRef = ref(storage, `${newPath}/${fileRef.name}`);
-        const content = await fileRef.getDownloadURL();
-        await uploadString(newFileRef, content);
+        const url = await getDownloadURL(fileRef);
+        await uploadString(newFileRef, url);
         await deleteObject(fileRef);
       }));
       

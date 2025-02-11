@@ -23,7 +23,6 @@ export const TokenCounter = () => {
 
       try {
         const idToken = await user.getIdToken();
-        // Use the development URL when in development mode
         const baseUrl = import.meta.env.DEV 
           ? "http://localhost:5000" 
           : "https://your-production-backend-url";
@@ -33,11 +32,17 @@ export const TokenCounter = () => {
           headers: {
             "Authorization": `Bearer ${idToken}`,
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Access-Control-Allow-Origin": "*",
           },
+          mode: "cors",
           credentials: "include",
         });
 
         if (!response.ok) {
+          console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+          const errorData = await response.text();
+          console.error("Détails de l'erreur:", errorData);
           throw new Error(`Erreur HTTP: ${response.status}`);
         }
 

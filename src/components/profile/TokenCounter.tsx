@@ -3,12 +3,15 @@ import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAuth } from "firebase/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const TokenCounter = () => {
   const [tokens, setTokens] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const MAX_TOKENS = 100000;
+  const MAX_RETRIES = 3;
 
   useEffect(() => {
     const fetchTokens = async () => {
@@ -22,13 +25,16 @@ export const TokenCounter = () => {
       }
 
       try {
-        const idToken = await user.getIdToken();
+        const idToken = await user.getIdToken(true); // Force token refresh
         console.log("Tentative de récupération des tokens...");
         
         const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${idToken}`
+            'Authorization': `Bearer ${idToken}`,
+            'Accept': '*/*',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           },
           credentials: 'include'
         });
@@ -37,6 +43,13 @@ export const TokenCounter = () => {
           console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
           const errorText = await response.text();
           console.error("Contenu de la réponse d'erreur:", errorText);
+          
+          // Retry logic
+          if (retryCount < MAX_RETRIES) {
+            setRetryCount(prev => prev + 1);
+            throw new Error(`Retry attempt ${retryCount + 1}`);
+          }
+          
           throw new Error(`Erreur serveur: ${response.status}`);
         }
 
@@ -49,16 +62,22 @@ export const TokenCounter = () => {
         }
 
         setTokens(data.total_tokens);
+        setRetryCount(0); // Reset retry count on success
       } catch (err) {
         console.error("Erreur détaillée lors de la récupération des tokens:", err);
-        setError("Erreur lors de la récupération des tokens");
+        if (retryCount < MAX_RETRIES) {
+          // If we haven't reached max retries, we'll try again
+          setTimeout(() => setRetryCount(prev => prev + 1), 1000 * (retryCount + 1));
+        } else {
+          setError("Erreur lors de la récupération des tokens");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchTokens();
-  }, []);
+  }, [retryCount]); // Add retryCount as dependency
 
   const percentage = (tokens / MAX_TOKENS) * 100;
 
@@ -76,7 +95,9 @@ export const TokenCounter = () => {
     return (
       <Card>
         <CardContent className="py-4">
-          <div className="text-center text-red-500">{error}</div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     );

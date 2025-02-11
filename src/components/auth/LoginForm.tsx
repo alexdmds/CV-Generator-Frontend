@@ -13,11 +13,19 @@ const firebaseConfig = {
   projectId: "cv-generator-447314",
   storageBucket: "cv-generator-447314.appspot.com",
   messagingSenderId: "177360827241",
-  appId: "1:177360827241:web:2eccbab9c11777f27203f8"
+  appId: "1:177360827241:web:2eccbab9c11777f27203f8",
+  // Ajout des paramètres CORS
+  authSettings: {
+    cors: {
+      origin: "*",
+      credentials: true
+    }
+  }
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+auth.settings = { appVerificationDisabledForTesting: true };
 const provider = new GoogleAuthProvider();
 
 export const LoginForm = () => {
@@ -29,6 +37,11 @@ export const LoginForm = () => {
       await setPersistence(auth, browserLocalPersistence);
       const result = await signInWithPopup(auth, provider);
       console.log("Utilisateur connecté:", result.user);
+      
+      // Définir le token dans le localStorage
+      const token = await result.user.getIdToken();
+      localStorage.setItem('firebase_token', token);
+      
       navigate("/profile");
     } catch (error: any) {
       console.error("Erreur de connexion:", error);
@@ -89,3 +102,4 @@ export const LoginForm = () => {
     </Card>
   );
 };
+

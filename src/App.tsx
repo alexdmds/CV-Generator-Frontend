@@ -24,7 +24,11 @@ const App = () => {
     // Définir la persistance sur LOCAL
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            const token = await user.getIdToken();
+            localStorage.setItem('firebase_token', token);
+          }
           setUser(user);
           setLoading(false);
         });
@@ -63,3 +67,4 @@ const App = () => {
 };
 
 export default App;
+

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +19,8 @@ export const DocumentList = () => {
         try {
           const cvFolderRef = ref(storage, `${user.uid}/sources`);
           const filesList = await listAll(cvFolderRef);
+          
+          const token = await user.getIdToken();
           
           const filesData = await Promise.all(
             filesList.items.map(async (fileRef) => {

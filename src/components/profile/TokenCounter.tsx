@@ -21,29 +21,37 @@ export const TokenCounter = () => {
       console.log("Tentative de récupération des tokens...");
       console.log("Token utilisé:", idToken.substring(0, 10) + "...");
       
-      const response = await fetch(`https://backend-flask-177360827241.europe-west9.run.app/get-total-tokens`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
+      try {
+        const response = await fetch(`https://backend-flask-177360827241.europe-west9.run.app/get-total-tokens`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache',
+          },
+          mode: 'cors',
+        });
+
+        console.log("Statut de la réponse:", response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Erreur détaillée:", errorText);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      });
 
-      console.log("Statut de la réponse:", response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Erreur détaillée:", errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        console.log("Données reçues:", data);
+        
+        if (typeof data.total_tokens !== 'number') {
+          throw new Error("Format de données invalide");
+        }
+        return data.total_tokens;
+      } catch (error) {
+        console.error("Erreur complète:", error);
+        throw error;
       }
-
-      const data = await response.json();
-      console.log("Données reçues:", data);
-      
-      if (typeof data.total_tokens !== 'number') {
-        throw new Error("Format de données invalide");
-      }
-      return data.total_tokens;
     };
 
     const setupAuthListener = () => {
@@ -56,7 +64,7 @@ export const TokenCounter = () => {
 
         try {
           console.log("Utilisateur connecté, récupération du token...");
-          const idToken = await user.getIdToken(true);
+          const idToken = await user.getIdToken();
           const totalTokens = await fetchTokens(idToken);
           setTokens(totalTokens);
           setRetryCount(0);

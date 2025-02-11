@@ -2,13 +2,26 @@
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getAuth, signOut } from "firebase/auth";
+import { useToast } from "@/components/ui/use-toast";
 
 export const Navbar = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleLogout = () => {
-    // TODO: Implement actual logout logic
-    window.location.href = "/";
+  const handleLogout = async () => {
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      navigate("/");
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      toast({
+        variant: "destructive",
+        title: "Erreur de déconnexion",
+        description: "Une erreur est survenue lors de la déconnexion.",
+      });
+    }
   };
 
   return (

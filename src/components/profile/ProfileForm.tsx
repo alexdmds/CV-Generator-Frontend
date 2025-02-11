@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { PhotoUpload } from "./PhotoUpload";
 import { DocumentList } from "./DocumentList";
 import { LastGeneration } from "./LastGeneration";
+import { TokenCounter } from "./TokenCounter";
 
 export const ProfileForm = () => {
   const { toast } = useToast();
@@ -23,6 +24,7 @@ export const ProfileForm = () => {
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Mon Profil</CardTitle>
         <LastGeneration />
+        <TokenCounter />
       </CardHeader>
       <CardContent>
         <div className="space-y-6">

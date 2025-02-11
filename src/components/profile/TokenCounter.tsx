@@ -17,6 +17,27 @@ export const TokenCounter = () => {
     const auth = getAuth();
     let unsubscribe: () => void;
 
+    const fetchTokens = async (idToken: string) => {
+      console.log("Tentative de récupération des tokens...");
+      const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (typeof data.total_tokens !== 'number') {
+        throw new Error("Format de données invalide");
+      }
+      return data.total_tokens;
+    };
+
     const setupAuthListener = () => {
       unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -26,49 +47,18 @@ export const TokenCounter = () => {
         }
 
         try {
-          // Get a fresh token without forcing refresh
-          const idToken = await user.getIdToken();
-          console.log("Tentative de récupération des tokens...");
-          
-          const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${idToken}`,
-              'Accept': '*/*',
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            },
-            credentials: 'include'
-          });
-
-          if (!response.ok) {
-            console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
-            const errorText = await response.text();
-            console.error("Contenu de la réponse d'erreur:", errorText);
-            
-            if (retryCount < MAX_RETRIES) {
-              setRetryCount(prev => prev + 1);
-              throw new Error(`Retry attempt ${retryCount + 1}`);
-            }
-            
-            throw new Error(`Erreur serveur: ${response.status}`);
-          }
-
-          const data = await response.json();
-          console.log("Données reçues:", data);
-          
-          if (typeof data.total_tokens !== 'number') {
-            console.error("Format de données invalide:", data);
-            throw new Error("Format de données invalide");
-          }
-
-          setTokens(data.total_tokens);
+          const idToken = await user.getIdToken(false);
+          const totalTokens = await fetchTokens(idToken);
+          setTokens(totalTokens);
           setRetryCount(0);
           setError(null);
         } catch (err) {
           console.error("Erreur détaillée lors de la récupération des tokens:", err);
+          
           if (retryCount < MAX_RETRIES) {
-            setTimeout(() => setRetryCount(prev => prev + 1), 1000 * (retryCount + 1));
+            // Exponential backoff for retries
+            const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+            setTimeout(() => setRetryCount(prev => prev + 1), delay);
           } else {
             setError("Erreur lors de la récupération des tokens");
           }

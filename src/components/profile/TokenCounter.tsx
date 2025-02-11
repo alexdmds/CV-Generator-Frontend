@@ -26,10 +26,14 @@ export const TokenCounter = () => {
         console.log("Tentative de récupération des tokens...");
         
         const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${idToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
           },
-          credentials: 'include' // Ajout de credentials include
+          mode: 'cors',
+          credentials: 'include'
         });
 
         if (!response.ok) {
@@ -39,7 +43,6 @@ export const TokenCounter = () => {
           throw new Error(`Erreur HTTP: ${response.status}`);
         }
 
-        // Vérification du type de contenu
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
           console.error("La réponse n'est pas au format JSON:", contentType);

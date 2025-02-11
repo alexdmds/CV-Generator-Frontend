@@ -23,26 +23,22 @@ export const TokenCounter = () => {
 
       try {
         const idToken = await user.getIdToken();
-        const baseUrl = import.meta.env.DEV 
-          ? "http://localhost:8080" 
-          : "https://your-production-backend-url";
+        const baseUrl = "https://cv-generator-447314-default-rtdb.europe-west1.firebasedatabase.app";
 
-        const response = await fetch(`${baseUrl}/get-total-tokens`, {
+        const response = await fetch(`${baseUrl}/tokens/${user.uid}.json`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${idToken}`,
+            "Content-Type": "application/json"
           },
         });
 
         if (!response.ok) {
-          console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
-          const errorData = await response.text();
-          console.error("Détails de l'erreur:", errorData);
           throw new Error(`Erreur HTTP: ${response.status}`);
         }
 
         const data = await response.json();
-        setTokens(data.total_tokens);
+        setTokens(data?.total_tokens || 0);
       } catch (err) {
         console.error("Erreur lors de la récupération des tokens:", err);
         setError("Erreur lors de la récupération des tokens");

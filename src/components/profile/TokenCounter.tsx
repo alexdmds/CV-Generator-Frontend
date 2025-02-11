@@ -19,19 +19,27 @@ export const TokenCounter = () => {
 
     const fetchTokens = async (idToken: string) => {
       console.log("Tentative de récupération des tokens...");
-      const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
+      console.log("Token utilisé:", idToken.substring(0, 10) + "...");
+      
+      const response = await fetch(`https://backend-flask-177360827241.europe-west9.run.app/get-total-tokens`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${idToken}`,
-        },
-        credentials: 'include'
+          'Content-Type': 'application/json',
+        }
       });
 
+      console.log("Statut de la réponse:", response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Erreur détaillée:", errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log("Données reçues:", data);
+      
       if (typeof data.total_tokens !== 'number') {
         throw new Error("Format de données invalide");
       }
@@ -47,7 +55,8 @@ export const TokenCounter = () => {
         }
 
         try {
-          const idToken = await user.getIdToken(false);
+          console.log("Utilisateur connecté, récupération du token...");
+          const idToken = await user.getIdToken(true);
           const totalTokens = await fetchTokens(idToken);
           setTokens(totalTokens);
           setRetryCount(0);
@@ -56,8 +65,8 @@ export const TokenCounter = () => {
           console.error("Erreur détaillée lors de la récupération des tokens:", err);
           
           if (retryCount < MAX_RETRIES) {
-            // Exponential backoff for retries
             const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+            console.log(`Nouvelle tentative dans ${delay}ms...`);
             setTimeout(() => setRetryCount(prev => prev + 1), delay);
           } else {
             setError("Erreur lors de la récupération des tokens");

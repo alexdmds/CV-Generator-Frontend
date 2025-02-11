@@ -28,11 +28,8 @@ export const TokenCounter = () => {
         const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${idToken}`
           },
-          mode: 'cors',
           credentials: 'include'
         });
 
@@ -40,13 +37,7 @@ export const TokenCounter = () => {
           console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
           const errorText = await response.text();
           console.error("Contenu de la réponse d'erreur:", errorText);
-          throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          console.error("La réponse n'est pas au format JSON:", contentType);
-          throw new Error("Format de réponse invalide");
+          throw new Error(`Erreur serveur: ${response.status}`);
         }
 
         const data = await response.json();

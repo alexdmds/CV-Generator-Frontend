@@ -23,10 +23,11 @@ export const TokenCounter = () => {
 
       try {
         const idToken = await user.getIdToken();
-        const baseUrl = "https://cv-generator-447314-default-rtdb.europe-west1.firebasedatabase.app";
-
-        // Utilisation du chemin /users/{userId} conformément aux règles
-        const response = await fetch(`${baseUrl}/users/${user.uid}/tokens.json?auth=${idToken}`);
+        const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+          }
+        });
 
         if (!response.ok) {
           console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
@@ -36,7 +37,7 @@ export const TokenCounter = () => {
         }
 
         const data = await response.json();
-        setTokens(data?.total_tokens || 0);
+        setTokens(data.total_tokens);
       } catch (err) {
         console.error("Erreur lors de la récupération des tokens:", err);
         setError("Erreur lors de la récupération des tokens");

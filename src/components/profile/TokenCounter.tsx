@@ -25,8 +25,8 @@ export const TokenCounter = () => {
         const idToken = await user.getIdToken();
         const baseUrl = "https://cv-generator-447314-default-rtdb.europe-west1.firebasedatabase.app";
 
-        // Using the auth parameter in the URL instead of Authorization header
-        const response = await fetch(`${baseUrl}/tokens/${user.uid}.json?auth=${idToken}`);
+        // Utilisation du chemin /users/{userId} conformément aux règles
+        const response = await fetch(`${baseUrl}/users/${user.uid}/tokens.json?auth=${idToken}`);
 
         if (!response.ok) {
           console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);

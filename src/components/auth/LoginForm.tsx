@@ -14,18 +14,10 @@ const firebaseConfig = {
   storageBucket: "cv-generator-447314.appspot.com",
   messagingSenderId: "177360827241",
   appId: "1:177360827241:web:2eccbab9c11777f27203f8",
-  // Ajout des paramètres CORS
-  authSettings: {
-    cors: {
-      origin: "*",
-      credentials: true
-    }
-  }
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-auth.settings = { appVerificationDisabledForTesting: true };
 const provider = new GoogleAuthProvider();
 
 export const LoginForm = () => {
@@ -102,4 +94,3 @@ export const LoginForm = () => {
     </Card>
   );
 };
-

@@ -23,21 +23,29 @@ export const TokenCounter = () => {
 
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch("https://your-backend-url/get-total-tokens", {
+        // Use the development URL when in development mode
+        const baseUrl = import.meta.env.DEV 
+          ? "http://localhost:5000" 
+          : "https://your-production-backend-url";
+
+        const response = await fetch(`${baseUrl}/get-total-tokens`, {
+          method: "GET",
           headers: {
-            Authorization: `Bearer ${idToken}`,
+            "Authorization": `Bearer ${idToken}`,
+            "Content-Type": "application/json",
           },
+          credentials: "include",
         });
 
         if (!response.ok) {
-          throw new Error("Erreur lors de la récupération des tokens");
+          throw new Error(`Erreur HTTP: ${response.status}`);
         }
 
         const data = await response.json();
         setTokens(data.total_tokens);
       } catch (err) {
+        console.error("Erreur lors de la récupération des tokens:", err);
         setError("Erreur lors de la récupération des tokens");
-        console.error("Erreur:", err);
       } finally {
         setLoading(false);
       }

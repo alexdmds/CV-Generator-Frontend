@@ -1,11 +1,10 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { FileText, PlusCircle, Trash2, Pencil } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { getStorage, ref, listAll, uploadString, deleteObject } from "firebase/storage";
+import { getStorage, ref, listAll, uploadString, deleteObject, getDownloadURL } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import {
   AlertDialog,

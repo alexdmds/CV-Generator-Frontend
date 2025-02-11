@@ -24,19 +24,14 @@ export const TokenCounter = () => {
       try {
         const idToken = await user.getIdToken();
         const baseUrl = import.meta.env.DEV 
-          ? "http://localhost:5000" 
+          ? "http://localhost:8080" 
           : "https://your-production-backend-url";
 
         const response = await fetch(`${baseUrl}/get-total-tokens`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${idToken}`,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Access-Control-Allow-Origin": "*",
           },
-          mode: "cors",
-          credentials: "include",
         });
 
         if (!response.ok) {

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const TokenCounter = () => {
@@ -14,70 +14,78 @@ export const TokenCounter = () => {
   const MAX_RETRIES = 3;
 
   useEffect(() => {
-    const fetchTokens = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
+    const auth = getAuth();
+    let unsubscribe: () => void;
 
-      if (!user) {
-        setError("Utilisateur non connecté");
-        setLoading(false);
-        return;
-      }
+    const setupAuthListener = () => {
+      unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          setError("Utilisateur non connecté");
+          setLoading(false);
+          return;
+        }
 
-      try {
-        const idToken = await user.getIdToken(true); // Force token refresh
-        console.log("Tentative de récupération des tokens...");
-        
-        const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Accept': '*/*',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          },
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
-          const errorText = await response.text();
-          console.error("Contenu de la réponse d'erreur:", errorText);
+        try {
+          // Get a fresh token without forcing refresh
+          const idToken = await user.getIdToken();
+          console.log("Tentative de récupération des tokens...");
           
-          // Retry logic
-          if (retryCount < MAX_RETRIES) {
-            setRetryCount(prev => prev + 1);
-            throw new Error(`Retry attempt ${retryCount + 1}`);
+          const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${idToken}`,
+              'Accept': '*/*',
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            },
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error("Contenu de la réponse d'erreur:", errorText);
+            
+            if (retryCount < MAX_RETRIES) {
+              setRetryCount(prev => prev + 1);
+              throw new Error(`Retry attempt ${retryCount + 1}`);
+            }
+            
+            throw new Error(`Erreur serveur: ${response.status}`);
           }
+
+          const data = await response.json();
+          console.log("Données reçues:", data);
           
-          throw new Error(`Erreur serveur: ${response.status}`);
-        }
+          if (typeof data.total_tokens !== 'number') {
+            console.error("Format de données invalide:", data);
+            throw new Error("Format de données invalide");
+          }
 
-        const data = await response.json();
-        console.log("Données reçues:", data);
-        
-        if (typeof data.total_tokens !== 'number') {
-          console.error("Format de données invalide:", data);
-          throw new Error("Format de données invalide");
+          setTokens(data.total_tokens);
+          setRetryCount(0);
+          setError(null);
+        } catch (err) {
+          console.error("Erreur détaillée lors de la récupération des tokens:", err);
+          if (retryCount < MAX_RETRIES) {
+            setTimeout(() => setRetryCount(prev => prev + 1), 1000 * (retryCount + 1));
+          } else {
+            setError("Erreur lors de la récupération des tokens");
+          }
+        } finally {
+          setLoading(false);
         }
-
-        setTokens(data.total_tokens);
-        setRetryCount(0); // Reset retry count on success
-      } catch (err) {
-        console.error("Erreur détaillée lors de la récupération des tokens:", err);
-        if (retryCount < MAX_RETRIES) {
-          // If we haven't reached max retries, we'll try again
-          setTimeout(() => setRetryCount(prev => prev + 1), 1000 * (retryCount + 1));
-        } else {
-          setError("Erreur lors de la récupération des tokens");
-        }
-      } finally {
-        setLoading(false);
-      }
+      });
     };
 
-    fetchTokens();
-  }, [retryCount]); // Add retryCount as dependency
+    setupAuthListener();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [retryCount]);
 
   const percentage = (tokens / MAX_TOKENS) * 100;
 

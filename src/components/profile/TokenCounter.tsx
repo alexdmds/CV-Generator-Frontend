@@ -23,23 +23,40 @@ export const TokenCounter = () => {
 
       try {
         const idToken = await user.getIdToken();
+        console.log("Tentative de récupération des tokens...");
+        
         const response = await fetch(`https://auto-cv-creator.lovable.app/get-total-tokens`, {
           headers: {
             'Authorization': `Bearer ${idToken}`,
-          }
+          },
+          credentials: 'include' // Ajout de credentials include
         });
 
         if (!response.ok) {
           console.error(`Erreur HTTP ${response.status}: ${response.statusText}`);
-          const errorData = await response.text();
-          console.error("Détails de l'erreur:", errorData);
+          const errorText = await response.text();
+          console.error("Contenu de la réponse d'erreur:", errorText);
           throw new Error(`Erreur HTTP: ${response.status}`);
         }
 
+        // Vérification du type de contenu
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("La réponse n'est pas au format JSON:", contentType);
+          throw new Error("Format de réponse invalide");
+        }
+
         const data = await response.json();
+        console.log("Données reçues:", data);
+        
+        if (typeof data.total_tokens !== 'number') {
+          console.error("Format de données invalide:", data);
+          throw new Error("Format de données invalide");
+        }
+
         setTokens(data.total_tokens);
       } catch (err) {
-        console.error("Erreur lors de la récupération des tokens:", err);
+        console.error("Erreur détaillée lors de la récupération des tokens:", err);
         setError("Erreur lors de la récupération des tokens");
       } finally {
         setLoading(false);

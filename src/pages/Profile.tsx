@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { TokenCounter } from "@/components/profile/TokenCounter";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -15,6 +16,9 @@ const Profile = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto mb-8">
+          <TokenCounter />
+        </div>
         <ProfileForm 
           isGenerating={isGenerating} 
           setIsGenerating={setIsGenerating} 

@@ -4,52 +4,43 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 export const TokenCounter = () => {
   const [tokens, setTokens] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_TOKENS = 100000;
-  const MAX_RETRIES = 3;
+  const MAX_TOKENS = 1000000; // 1 million de tokens
 
   useEffect(() => {
     const auth = getAuth();
+    const db = getFirestore();
     let unsubscribe: () => void;
 
-    const fetchTokens = async (idToken: string) => {
-      console.log("Tentative de récupération des tokens...");
-      console.log("Token utilisé:", idToken.substring(0, 10) + "...");
-      
+    const fetchTokensFromFirestore = async (userId: string) => {
       try {
-        const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/get-total-tokens`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-          mode: 'cors',
-        });
-
-        console.log("Statut de la réponse:", response.status);
+        console.log("Tentative de récupération des tokens depuis Firestore...");
+        console.log("User ID:", userId);
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Erreur détaillée:", errorText);
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Données reçues:", data);
+        const tokenStatsRef = doc(db, "token_stats", userId);
+        const tokenStatsDoc = await getDoc(tokenStatsRef);
         
-        if (typeof data.total_tokens !== 'number') {
-          throw new Error("Format de données invalide");
+        if (tokenStatsDoc.exists()) {
+          const data = tokenStatsDoc.data();
+          console.log("Données récupérées:", data);
+          
+          if (data && typeof data.total_tokens === 'number') {
+            return data.total_tokens;
+          } else {
+            console.log("Le champ 'total_tokens' n'existe pas ou n'est pas un nombre");
+            return 0;
+          }
+        } else {
+          console.log("Aucun document trouvé pour cet utilisateur");
+          return 0;
         }
-        return data.total_tokens;
       } catch (error) {
-        console.error("Erreur complète:", error);
+        console.error("Erreur lors de la récupération des tokens:", error);
         throw error;
       }
     };
@@ -63,22 +54,15 @@ export const TokenCounter = () => {
         }
 
         try {
-          console.log("Utilisateur connecté, récupération du token...");
-          const idToken = await user.getIdToken();
-          const totalTokens = await fetchTokens(idToken);
+          console.log("Utilisateur connecté, récupération des tokens...");
+          const userId = user.uid;
+          const totalTokens = await fetchTokensFromFirestore(userId);
           setTokens(totalTokens);
-          setRetryCount(0);
           setError(null);
         } catch (err) {
           console.error("Erreur détaillée lors de la récupération des tokens:", err);
-          
-          if (retryCount < MAX_RETRIES) {
-            const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-            console.log(`Nouvelle tentative dans ${delay}ms...`);
-            setTimeout(() => setRetryCount(prev => prev + 1), delay);
-          } else {
-            setError("Erreur lors de la récupération des tokens");
-          }
+          setError("Erreur lors de la récupération des tokens");
+          setTokens(0); // En cas d'erreur, on affiche 0
         } finally {
           setLoading(false);
         }
@@ -92,7 +76,7 @@ export const TokenCounter = () => {
         unsubscribe();
       }
     };
-  }, [retryCount]);
+  }, []);
 
   const percentage = (tokens / MAX_TOKENS) * 100;
 

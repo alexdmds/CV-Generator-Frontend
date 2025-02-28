@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
@@ -12,38 +12,55 @@ export const TokenCounter = () => {
   const [error, setError] = useState<string | null>(null);
   const MAX_TOKENS = 1000000; // 1 million de tokens
 
+  const fetchTokens = useCallback(async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      setError("Utilisateur non connecté");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const db = getFirestore();
+      const userId = user.uid;
+      
+      console.log("Tentative de récupération des tokens depuis Firestore...");
+      console.log("User ID:", userId);
+      
+      const tokenStatsRef = doc(db, "token_stats", userId);
+      const tokenStatsDoc = await getDoc(tokenStatsRef);
+      
+      if (tokenStatsDoc.exists()) {
+        const data = tokenStatsDoc.data();
+        console.log("Données récupérées:", data);
+        
+        if (data && typeof data.total_tokens === 'number') {
+          setTokens(data.total_tokens);
+        } else {
+          console.log("Le champ 'total_tokens' n'existe pas ou n'est pas un nombre");
+          setTokens(0);
+        }
+      } else {
+        console.log("Aucun document trouvé pour cet utilisateur");
+        setTokens(0);
+      }
+      
+      setError(null);
+    } catch (err) {
+      console.error("Erreur détaillée lors de la récupération des tokens:", err);
+      setError("Erreur lors de la récupération des tokens");
+      setTokens(0); // En cas d'erreur, on affiche 0
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const auth = getAuth();
-    const db = getFirestore();
     let unsubscribe: () => void;
-
-    const fetchTokensFromFirestore = async (userId: string) => {
-      try {
-        console.log("Tentative de récupération des tokens depuis Firestore...");
-        console.log("User ID:", userId);
-        
-        const tokenStatsRef = doc(db, "token_stats", userId);
-        const tokenStatsDoc = await getDoc(tokenStatsRef);
-        
-        if (tokenStatsDoc.exists()) {
-          const data = tokenStatsDoc.data();
-          console.log("Données récupérées:", data);
-          
-          if (data && typeof data.total_tokens === 'number') {
-            return data.total_tokens;
-          } else {
-            console.log("Le champ 'total_tokens' n'existe pas ou n'est pas un nombre");
-            return 0;
-          }
-        } else {
-          console.log("Aucun document trouvé pour cet utilisateur");
-          return 0;
-        }
-      } catch (error) {
-        console.error("Erreur lors de la récupération des tokens:", error);
-        throw error;
-      }
-    };
 
     const setupAuthListener = () => {
       unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -53,19 +70,7 @@ export const TokenCounter = () => {
           return;
         }
 
-        try {
-          console.log("Utilisateur connecté, récupération des tokens...");
-          const userId = user.uid;
-          const totalTokens = await fetchTokensFromFirestore(userId);
-          setTokens(totalTokens);
-          setError(null);
-        } catch (err) {
-          console.error("Erreur détaillée lors de la récupération des tokens:", err);
-          setError("Erreur lors de la récupération des tokens");
-          setTokens(0); // En cas d'erreur, on affiche 0
-        } finally {
-          setLoading(false);
-        }
+        await fetchTokens();
       });
     };
 
@@ -76,7 +81,7 @@ export const TokenCounter = () => {
         unsubscribe();
       }
     };
-  }, []);
+  }, [fetchTokens]);
 
   const percentage = (tokens / MAX_TOKENS) * 100;
 

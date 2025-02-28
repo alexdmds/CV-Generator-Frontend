@@ -10,6 +10,7 @@ import { TokenCounter } from "./TokenCounter";
 import { useState } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { getFirestore, doc, getDoc, updateDoc, increment } from "firebase/firestore";
 
 // Import des composants d'alerte
 import {
@@ -74,6 +75,28 @@ export const ProfileForm = ({ isGenerating, setIsGenerating }: ProfileFormProps)
       const data = await response.json();
       console.log("Profil généré avec succès:", data);
 
+      // Mise à jour du compteur de tokens dans Firestore
+      const db = getFirestore();
+      const tokenStatsRef = doc(db, "token_stats", user.uid);
+
+      // Vérifier si le document existe déjà
+      const tokenStatsDoc = await getDoc(tokenStatsRef);
+      
+      // Estimation approximative des tokens utilisés pour chaque génération
+      const tokensUsed = 50000; // Valeur arbitraire à ajuster selon vos besoins
+
+      if (tokenStatsDoc.exists()) {
+        // Incrémenter le compteur existant
+        await updateDoc(tokenStatsRef, {
+          total_tokens: increment(tokensUsed)
+        });
+      } else {
+        // Créer un nouveau document
+        await updateDoc(tokenStatsRef, {
+          total_tokens: tokensUsed
+        });
+      }
+
       toast({
         title: "Profil généré",
         description: "Votre profil a été généré avec succès !",
@@ -95,7 +118,6 @@ export const ProfileForm = ({ isGenerating, setIsGenerating }: ProfileFormProps)
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Mon Profil</CardTitle>
         <LastGeneration />
-        <TokenCounter />
       </CardHeader>
       <CardContent>
         <div className="space-y-6">

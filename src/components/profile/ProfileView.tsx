@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,8 @@ export const ProfileView = () => {
   const { toast } = useToast();
   const auth = getAuth();
   const db = getFirestore();
+  // Timer pour l'auto-sauvegarde
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -127,7 +129,32 @@ export const ProfileView = () => {
     fetchProfile();
   }, [auth, toast, db]);
 
+  // Fonction de sauvegarde avec debounce
+  const debouncedSave = useCallback((updatedProfile: Profile) => {
+    // Annuler le timer précédent s'il existe
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Définir un nouveau timer pour sauvegarder après un délai
+    saveTimeoutRef.current = setTimeout(() => {
+      saveProfile(updatedProfile);
+    }, 2000); // 2 secondes de délai
+  }, []);
+
+  // Effet pour nettoyer le timer lors du démontage du composant
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const saveProfile = async (updatedProfile: Profile) => {
+    // Si déjà en train de sauvegarder, ne pas lancer une nouvelle sauvegarde
+    if (isSaving) return;
+    
     setIsSaving(true);
     try {
       const user = auth.currentUser;
@@ -135,7 +162,7 @@ export const ProfileView = () => {
         throw new Error("Utilisateur non connecté");
       }
 
-      // Sauvegarder d'abord dans Firestore pour garantir la persistence locale
+      // Sauvegarder dans Firestore
       let firestoreSaveSuccess = false;
       try {
         const userDocRef = doc(db, "users", user.uid);
@@ -146,7 +173,7 @@ export const ProfileView = () => {
         console.error("Erreur lors de la sauvegarde dans Firestore:", firestoreError);
         toast({
           variant: "destructive",
-          title: "Erreur lors de la sauvegarde locale",
+          title: "Erreur lors de la sauvegarde",
           description: "Vos modifications n'ont pas pu être enregistrées. Veuillez réessayer.",
         });
         setIsSaving(false);
@@ -156,8 +183,7 @@ export const ProfileView = () => {
       // Sauvegarder dans l'état local pour refléter les modifications immédiatement
       setProfile(updatedProfile);
 
-      // Essayer ensuite de sauvegarder dans l'API 
-      let apiSaveSuccess = false;
+      // Essayer de sauvegarder dans l'API
       try {
         const token = await user.getIdToken();
         const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/update-profile`, {
@@ -175,23 +201,17 @@ export const ProfileView = () => {
         }
         
         console.log("Profil mis à jour avec succès sur l'API");
-        apiSaveSuccess = true;
       } catch (apiError) {
         console.error("Erreur lors de la sauvegarde sur l'API:", apiError);
         // Ne pas faire échouer la sauvegarde juste parce que l'API a échoué
         // Les données sont déjà dans Firestore
       }
 
-      // Message approprié en fonction des succès/échecs
-      if (firestoreSaveSuccess && apiSaveSuccess) {
+      // Afficher un toast seulement lors de la sauvegarde manuelle (pas auto)
+      if (!saveTimeoutRef.current) {
         toast({
           title: "Profil enregistré",
-          description: "Les modifications ont été sauvegardées avec succès localement et sur le serveur.",
-        });
-      } else if (firestoreSaveSuccess) {
-        toast({
-          title: "Profil enregistré localement",
-          description: "Les modifications ont été sauvegardées localement mais n'ont pas pu être synchronisées avec le serveur.",
+          description: "Les modifications ont été sauvegardées avec succès.",
         });
       }
     } catch (error) {
@@ -268,7 +288,11 @@ export const ProfileView = () => {
                 const updatedProfile = { ...profile, head };
                 setProfile(updatedProfile);
                 saveProfile(updatedProfile);
-              }} 
+              }}
+              onAutoSave={(head) => {
+                const updatedProfile = { ...profile, head };
+                debouncedSave(updatedProfile);
+              }}
             />
           </TabsContent>
 
@@ -283,7 +307,14 @@ export const ProfileView = () => {
                 };
                 setProfile(updatedProfile);
                 saveProfile(updatedProfile);
-              }} 
+              }}
+              onAutoSave={(experiences) => {
+                const updatedProfile = { 
+                  ...profile, 
+                  experiences: { experiences } 
+                };
+                debouncedSave(updatedProfile);
+              }}
             />
           </TabsContent>
 
@@ -298,7 +329,14 @@ export const ProfileView = () => {
                 };
                 setProfile(updatedProfile);
                 saveProfile(updatedProfile);
-              }} 
+              }}
+              onAutoSave={(educations) => {
+                const updatedProfile = { 
+                  ...profile, 
+                  education: { educations } 
+                };
+                debouncedSave(updatedProfile);
+              }}
             />
           </TabsContent>
 
@@ -310,7 +348,11 @@ export const ProfileView = () => {
                 const updatedProfile = { ...profile, skills };
                 setProfile(updatedProfile);
                 saveProfile(updatedProfile);
-              }} 
+              }}
+              onAutoSave={(skills) => {
+                const updatedProfile = { ...profile, skills };
+                debouncedSave(updatedProfile);
+              }}
             />
           </TabsContent>
 
@@ -322,7 +364,11 @@ export const ProfileView = () => {
                 const updatedProfile = { ...profile, hobbies };
                 setProfile(updatedProfile);
                 saveProfile(updatedProfile);
-              }} 
+              }}
+              onAutoSave={(hobbies) => {
+                const updatedProfile = { ...profile, hobbies };
+                debouncedSave(updatedProfile);
+              }}
             />
           </TabsContent>
         </Tabs>
@@ -332,9 +378,14 @@ export const ProfileView = () => {
 };
 
 // Formulaire pour les informations générales
-const HeadForm = ({ initialData, onSave }: { 
+const HeadForm = ({ 
+  initialData, 
+  onSave,
+  onAutoSave 
+}: { 
   initialData: Profile['head'], 
-  onSave: (data: Profile['head']) => void 
+  onSave: (data: Profile['head']) => void,
+  onAutoSave: (data: Profile['head']) => void 
 }) => {
   const form = useForm({
     defaultValues: initialData,
@@ -346,6 +397,14 @@ const HeadForm = ({ initialData, onSave }: {
     onSave(data);
     setIsSaving(false);
   };
+
+  // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      onAutoSave(value as Profile['head']);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, onAutoSave]);
 
   return (
     <Form {...form}>
@@ -402,18 +461,31 @@ const HeadForm = ({ initialData, onSave }: {
           <Save className="mr-2 h-4 w-4" />
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </Button>
+        <div className="text-xs text-muted-foreground text-center mt-2">
+          Les modifications sont automatiquement enregistrées lors de la saisie
+        </div>
       </form>
     </Form>
   );
 };
 
 // Formulaire pour les expériences
-const ExperiencesForm = ({ initialData, onSave }: { 
+const ExperiencesForm = ({ 
+  initialData, 
+  onSave,
+  onAutoSave 
+}: { 
   initialData: Profile['experiences']['experiences'], 
-  onSave: (data: Profile['experiences']['experiences']) => void 
+  onSave: (data: Profile['experiences']['experiences']) => void,
+  onAutoSave: (data: Profile['experiences']['experiences']) => void 
 }) => {
   const [experiences, setExperiences] = useState(initialData);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Surveiller les changements pour déclencher l'auto-sauvegarde
+  useEffect(() => {
+    onAutoSave(experiences);
+  }, [experiences, onAutoSave]);
 
   const addExperience = () => {
     setExperiences([...experiences, {
@@ -514,17 +586,30 @@ const ExperiencesForm = ({ initialData, onSave }: {
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </Button>
       </div>
+      <div className="text-xs text-muted-foreground text-center mt-2">
+        Les modifications sont automatiquement enregistrées lors de la saisie
+      </div>
     </div>
   );
 };
 
 // Formulaire pour la formation
-const EducationForm = ({ initialData, onSave }: { 
+const EducationForm = ({ 
+  initialData, 
+  onSave,
+  onAutoSave 
+}: { 
   initialData: Profile['education']['educations'], 
-  onSave: (data: Profile['education']['educations']) => void 
+  onSave: (data: Profile['education']['educations']) => void,
+  onAutoSave: (data: Profile['education']['educations']) => void
 }) => {
   const [educations, setEducations] = useState(initialData);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Surveiller les changements pour déclencher l'auto-sauvegarde
+  useEffect(() => {
+    onAutoSave(educations);
+  }, [educations, onAutoSave]);
 
   const addEducation = () => {
     setEducations([...educations, {
@@ -616,14 +701,22 @@ const EducationForm = ({ initialData, onSave }: {
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </Button>
       </div>
+      <div className="text-xs text-muted-foreground text-center mt-2">
+        Les modifications sont automatiquement enregistrées lors de la saisie
+      </div>
     </div>
   );
 };
 
 // Formulaire pour les compétences
-const SkillsForm = ({ initialData, onSave }: { 
+const SkillsForm = ({ 
+  initialData, 
+  onSave,
+  onAutoSave 
+}: { 
   initialData: Profile['skills'], 
-  onSave: (data: Profile['skills']) => void 
+  onSave: (data: Profile['skills']) => void,
+  onAutoSave: (data: Profile['skills']) => void 
 }) => {
   const form = useForm({
     defaultValues: initialData,
@@ -635,6 +728,14 @@ const SkillsForm = ({ initialData, onSave }: {
     onSave(data);
     setIsSaving(false);
   };
+
+  // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      onAutoSave(value as Profile['skills']);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, onAutoSave]);
 
   return (
     <Form {...form}>
@@ -659,15 +760,23 @@ const SkillsForm = ({ initialData, onSave }: {
           <Save className="mr-2 h-4 w-4" />
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </Button>
+        <div className="text-xs text-muted-foreground text-center mt-2">
+          Les modifications sont automatiquement enregistrées lors de la saisie
+        </div>
       </form>
     </Form>
   );
 };
 
 // Formulaire pour les loisirs
-const HobbiesForm = ({ initialData, onSave }: { 
+const HobbiesForm = ({ 
+  initialData, 
+  onSave,
+  onAutoSave 
+}: { 
   initialData: Profile['hobbies'], 
-  onSave: (data: Profile['hobbies']) => void 
+  onSave: (data: Profile['hobbies']) => void,
+  onAutoSave: (data: Profile['hobbies']) => void
 }) => {
   const form = useForm({
     defaultValues: initialData,
@@ -679,6 +788,14 @@ const HobbiesForm = ({ initialData, onSave }: {
     onSave(data);
     setIsSaving(false);
   };
+
+  // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      onAutoSave(value as Profile['hobbies']);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, onAutoSave]);
 
   return (
     <Form {...form}>
@@ -703,6 +820,9 @@ const HobbiesForm = ({ initialData, onSave }: {
           <Save className="mr-2 h-4 w-4" />
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </Button>
+        <div className="text-xs text-muted-foreground text-center mt-2">
+          Les modifications sont automatiquement enregistrées lors de la saisie
+        </div>
       </form>
     </Form>
   );

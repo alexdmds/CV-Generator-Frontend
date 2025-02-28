@@ -377,6 +377,21 @@ export const ProfileView = () => {
   );
 };
 
+// Définition d'un effet de sauvegarde personnalisé CSS
+// Effet visuel lorsque la sauvegarde est complète
+const savedFieldStyle = `
+  transition-all duration-500 
+  animate-none
+  focus:ring-2 focus:ring-offset-2 focus:ring-purple-500
+`;
+
+// Effet d'animation pour montrer que le champ a été sauvegardé
+const savedAnimation = `
+  border-green-400
+  ring-1 ring-green-400/30
+  transition-all duration-500
+`;
+
 // Formulaire pour les informations générales
 const HeadForm = ({ 
   initialData, 
@@ -390,14 +405,43 @@ const HeadForm = ({
   const form = useForm({
     defaultValues: initialData,
   });
+  const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
     const subscription = form.watch((value) => {
+      // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
+      setSavedFields({});
       onAutoSave(value as Profile['head']);
     });
     return () => subscription.unsubscribe();
   }, [form, onAutoSave]);
+
+  // Effet pour montrer l'animation de sauvegarde
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Lorsque le timer de sauvegarde se déclenche (après 2 secondes d'inactivité)
+      if (saveTimeoutRef.current === null) {
+        // Marquer tous les champs comme sauvegardés
+        const fields = Object.keys(form.getValues());
+        const newSavedFields: Record<string, boolean> = {};
+        fields.forEach(field => {
+          newSavedFields[field] = true;
+        });
+        setSavedFields(newSavedFields);
+        
+        // Réinitialiser l'effet après 1.5 secondes
+        setTimeout(() => {
+          setSavedFields({});
+        }, 1500);
+      }
+    }, 2100); // Un peu plus que le délai de sauvegarde (2000 ms)
+    
+    return () => clearTimeout(timer);
+  }, [form]);
+
+  // Référence au timeout de sauvegarde pour vérifier quand la sauvegarde est terminée
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   return (
     <Form {...form}>
@@ -409,7 +453,11 @@ const HeadForm = ({
             <FormItem>
               <FormLabel>Nom complet</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: John Doe" {...field} />
+                <Input 
+                  placeholder="Ex: John Doe" 
+                  {...field} 
+                  className={savedFields.name ? savedAnimation : savedFieldStyle}
+                />
               </FormControl>
             </FormItem>
           )}
@@ -421,7 +469,11 @@ const HeadForm = ({
             <FormItem>
               <FormLabel>Téléphone</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: +33 6 00 00 00 00" {...field} />
+                <Input 
+                  placeholder="Ex: +33 6 00 00 00 00" 
+                  {...field} 
+                  className={savedFields.phone ? savedAnimation : savedFieldStyle}
+                />
               </FormControl>
             </FormItem>
           )}
@@ -433,7 +485,11 @@ const HeadForm = ({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: john.doe@example.com" {...field} />
+                <Input 
+                  placeholder="Ex: john.doe@example.com" 
+                  {...field} 
+                  className={savedFields.email ? savedAnimation : savedFieldStyle}
+                />
               </FormControl>
             </FormItem>
           )}
@@ -445,7 +501,11 @@ const HeadForm = ({
             <FormItem>
               <FormLabel>Titre professionnel</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Développeur Web Senior" {...field} />
+                <Input 
+                  placeholder="Ex: Développeur Web Senior" 
+                  {...field} 
+                  className={savedFields.general_title ? savedAnimation : savedFieldStyle}
+                />
               </FormControl>
             </FormItem>
           )}
@@ -469,11 +529,28 @@ const ExperiencesForm = ({
   onAutoSave: (data: Profile['experiences']['experiences']) => void 
 }) => {
   const [experiences, setExperiences] = useState(initialData);
+  const [savedSections, setSavedSections] = useState<boolean>(false);
 
   // Surveiller les changements pour déclencher l'auto-sauvegarde
   useEffect(() => {
+    // Réinitialiser l'animation lors d'un changement
+    setSavedSections(false);
     onAutoSave(experiences);
   }, [experiences, onAutoSave]);
+
+  // Effet pour montrer l'animation de sauvegarde
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSavedSections(true);
+      
+      // Réinitialiser après 1.5 secondes
+      setTimeout(() => {
+        setSavedSections(false);
+      }, 1500);
+    }, 2100); // Un peu plus que le délai de sauvegarde
+    
+    return () => clearTimeout(timer);
+  }, [experiences]);
 
   const addExperience = () => {
     setExperiences([...experiences, {
@@ -501,7 +578,10 @@ const ExperiencesForm = ({
   return (
     <div className="space-y-6">
       {experiences.map((experience, index) => (
-        <div key={index} className="p-4 border rounded-md space-y-4">
+        <div 
+          key={index} 
+          className={`p-4 border rounded-md space-y-4 ${savedSections ? savedAnimation : 'transition-all duration-300'}`}
+        >
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">Expérience {index + 1}</h3>
             <Button 
@@ -519,6 +599,7 @@ const ExperiencesForm = ({
                 value={experience.post} 
                 onChange={(e) => updateExperience(index, 'post', e.target.value)}
                 placeholder="Ex: Développeur Frontend"
+                className={savedSections ? savedAnimation : savedFieldStyle}
               />
             </div>
             <div className="space-y-2">
@@ -527,6 +608,7 @@ const ExperiencesForm = ({
                 value={experience.company} 
                 onChange={(e) => updateExperience(index, 'company', e.target.value)}
                 placeholder="Ex: Acme Inc."
+                className={savedSections ? savedAnimation : savedFieldStyle}
               />
             </div>
             <div className="space-y-2">
@@ -535,6 +617,7 @@ const ExperiencesForm = ({
                 value={experience.location} 
                 onChange={(e) => updateExperience(index, 'location', e.target.value)}
                 placeholder="Ex: Paris, France"
+                className={savedSections ? savedAnimation : savedFieldStyle}
               />
             </div>
             <div className="space-y-2">
@@ -543,6 +626,7 @@ const ExperiencesForm = ({
                 value={experience.dates} 
                 onChange={(e) => updateExperience(index, 'dates', e.target.value)}
                 placeholder="Ex: Janvier 2020 - Présent"
+                className={savedSections ? savedAnimation : savedFieldStyle}
               />
             </div>
           </div>
@@ -553,6 +637,7 @@ const ExperiencesForm = ({
               onChange={(e) => updateExperience(index, 'description', e.target.value)}
               placeholder="Description des responsabilités et réalisations"
               rows={4}
+              className={savedSections ? savedAnimation : savedFieldStyle}
             />
           </div>
           <Separator />
@@ -582,11 +667,28 @@ const EducationForm = ({
   onAutoSave: (data: Profile['education']['educations']) => void
 }) => {
   const [educations, setEducations] = useState(initialData);
+  const [savedSections, setSavedSections] = useState<boolean>(false);
 
   // Surveiller les changements pour déclencher l'auto-sauvegarde
   useEffect(() => {
+    // Réinitialiser l'animation lors d'un changement
+    setSavedSections(false);
     onAutoSave(educations);
   }, [educations, onAutoSave]);
+
+  // Effet pour montrer l'animation de sauvegarde
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSavedSections(true);
+      
+      // Réinitialiser après 1.5 secondes
+      setTimeout(() => {
+        setSavedSections(false);
+      }, 1500);
+    }, 2100); // Un peu plus que le délai de sauvegarde
+    
+    return () => clearTimeout(timer);
+  }, [educations]);
 
   const addEducation = () => {
     setEducations([...educations, {
@@ -613,7 +715,10 @@ const EducationForm = ({
   return (
     <div className="space-y-6">
       {educations.map((education, index) => (
-        <div key={index} className="p-4 border rounded-md space-y-4">
+        <div 
+          key={index} 
+          className={`p-4 border rounded-md space-y-4 ${savedSections ? savedAnimation : 'transition-all duration-300'}`}
+        >
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">Formation {index + 1}</h3>
             <Button 
@@ -631,6 +736,7 @@ const EducationForm = ({
                 value={education.intitule} 
                 onChange={(e) => updateEducation(index, 'intitule', e.target.value)}
                 placeholder="Ex: Master en Informatique"
+                className={savedSections ? savedAnimation : savedFieldStyle}
               />
             </div>
             <div className="space-y-2">
@@ -639,6 +745,7 @@ const EducationForm = ({
                 value={education.etablissement} 
                 onChange={(e) => updateEducation(index, 'etablissement', e.target.value)}
                 placeholder="Ex: Université Paris Saclay"
+                className={savedSections ? savedAnimation : savedFieldStyle}
               />
             </div>
             <div className="space-y-2">
@@ -647,6 +754,7 @@ const EducationForm = ({
                 value={education.dates} 
                 onChange={(e) => updateEducation(index, 'dates', e.target.value)}
                 placeholder="Ex: 2015 - 2017"
+                className={savedSections ? savedAnimation : savedFieldStyle}
               />
             </div>
           </div>
@@ -657,6 +765,7 @@ const EducationForm = ({
               onChange={(e) => updateEducation(index, 'description', e.target.value)}
               placeholder="Description du programme et des acquis"
               rows={4}
+              className={savedSections ? savedAnimation : savedFieldStyle}
             />
           </div>
           <Separator />
@@ -688,14 +797,37 @@ const SkillsForm = ({
   const form = useForm({
     defaultValues: initialData,
   });
+  const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
     const subscription = form.watch((value) => {
+      // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
+      setSavedFields({});
       onAutoSave(value as Profile['skills']);
     });
     return () => subscription.unsubscribe();
   }, [form, onAutoSave]);
+
+  // Effet pour montrer l'animation de sauvegarde
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Marquer tous les champs comme sauvegardés
+      const fields = Object.keys(form.getValues());
+      const newSavedFields: Record<string, boolean> = {};
+      fields.forEach(field => {
+        newSavedFields[field] = true;
+      });
+      setSavedFields(newSavedFields);
+      
+      // Réinitialiser l'effet après 1.5 secondes
+      setTimeout(() => {
+        setSavedFields({});
+      }, 1500);
+    }, 2100); // Un peu plus que le délai de sauvegarde
+    
+    return () => clearTimeout(timer);
+  }, [form]);
 
   return (
     <Form {...form}>
@@ -711,6 +843,7 @@ const SkillsForm = ({
                   placeholder="Listez vos compétences techniques et personnelles"
                   rows={8}
                   {...field} 
+                  className={savedFields.description ? savedAnimation : savedFieldStyle}
                 />
               </FormControl>
             </FormItem>
@@ -737,14 +870,37 @@ const HobbiesForm = ({
   const form = useForm({
     defaultValues: initialData,
   });
+  const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
     const subscription = form.watch((value) => {
+      // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
+      setSavedFields({});
       onAutoSave(value as Profile['hobbies']);
     });
     return () => subscription.unsubscribe();
   }, [form, onAutoSave]);
+
+  // Effet pour montrer l'animation de sauvegarde
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Marquer tous les champs comme sauvegardés
+      const fields = Object.keys(form.getValues());
+      const newSavedFields: Record<string, boolean> = {};
+      fields.forEach(field => {
+        newSavedFields[field] = true;
+      });
+      setSavedFields(newSavedFields);
+      
+      // Réinitialiser l'effet après 1.5 secondes
+      setTimeout(() => {
+        setSavedFields({});
+      }, 1500);
+    }, 2100); // Un peu plus que le délai de sauvegarde
+    
+    return () => clearTimeout(timer);
+  }, [form]);
 
   return (
     <Form {...form}>
@@ -760,6 +916,7 @@ const HobbiesForm = ({
                   placeholder="Décrivez vos centres d'intérêt, hobbies et activités"
                   rows={8}
                   {...field} 
+                  className={savedFields.description ? savedAnimation : savedFieldStyle}
                 />
               </FormControl>
             </FormItem>

@@ -4,44 +4,52 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 export const TokenCounter = () => {
   const [tokens, setTokens] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_TOKENS = 1000000; // Limite définie à un million
+  const MAX_TOKENS = 100000;
   const MAX_RETRIES = 3;
 
   useEffect(() => {
     const auth = getAuth();
-    const db = getFirestore();
     let unsubscribe: () => void;
 
-    const fetchTokensFromFirestore = async (userId: string) => {
-      console.log("Tentative de récupération des tokens depuis Firestore...");
+    const fetchTokens = async (idToken: string) => {
+      console.log("Tentative de récupération des tokens...");
+      console.log("Token utilisé:", idToken.substring(0, 10) + "...");
       
       try {
-        const tokenDocRef = doc(db, "token_stats", userId);
-        const tokenDoc = await getDoc(tokenDocRef);
+        const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/get-total-tokens`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache',
+          },
+          mode: 'cors',
+        });
+
+        console.log("Statut de la réponse:", response.status);
         
-        if (tokenDoc.exists()) {
-          const data = tokenDoc.data();
-          console.log("Données de tokens récupérées:", data);
-          
-          if (typeof data.total_tokens === 'number') {
-            return data.total_tokens;
-          } else {
-            console.warn("Format de données invalide, 'total_tokens' n'est pas un nombre:", data);
-            return 0;
-          }
-        } else {
-          console.log("Aucun document de tokens trouvé pour l'utilisateur:", userId);
-          return 0;
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Erreur détaillée:", errorText);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const data = await response.json();
+        console.log("Données reçues:", data);
+        
+        if (typeof data.total_tokens !== 'number') {
+          throw new Error("Format de données invalide");
+        }
+        return data.total_tokens;
       } catch (error) {
-        console.error("Erreur lors de la récupération des tokens depuis Firestore:", error);
+        console.error("Erreur complète:", error);
         throw error;
       }
     };
@@ -55,9 +63,9 @@ export const TokenCounter = () => {
         }
 
         try {
-          console.log("Utilisateur connecté, récupération des tokens...");
-          const userId = user.uid;
-          const totalTokens = await fetchTokensFromFirestore(userId);
+          console.log("Utilisateur connecté, récupération du token...");
+          const idToken = await user.getIdToken();
+          const totalTokens = await fetchTokens(idToken);
           setTokens(totalTokens);
           setRetryCount(0);
           setError(null);

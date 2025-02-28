@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { PlusCircle, Trash2, User, Briefcase, GraduationCap, Brain, Heart, Save } from "lucide-react";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
 const emptyProfile: Profile = {
   head: {
@@ -40,6 +41,7 @@ export const ProfileView = () => {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const auth = getAuth();
+  const db = getFirestore();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,6 +52,19 @@ export const ProfileView = () => {
           throw new Error("Utilisateur non connecté");
         }
 
+        // Tenter de récupérer le profil depuis Firestore
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists() && userDoc.data().profile) {
+          // Profil trouvé dans Firestore
+          console.log("Profil récupéré depuis Firestore:", userDoc.data().profile);
+          setProfile(userDoc.data().profile as Profile);
+          setIsLoading(false);
+          return;
+        }
+
+        // Si non trouvé dans Firestore, essayer l'API
         const token = await user.getIdToken();
         const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/get-profile`, {
           method: 'GET',
@@ -69,6 +84,10 @@ export const ProfileView = () => {
 
         const data = await response.json();
         setProfile(data);
+        
+        // Sauvegarder le profil dans Firestore pour un accès futur
+        await setDoc(userDocRef, { profile: data }, { merge: true });
+        console.log("Profil sauvegardé dans Firestore");
       } catch (error) {
         console.error("Erreur lors de la récupération du profil:", error);
         toast({
@@ -82,7 +101,7 @@ export const ProfileView = () => {
     };
 
     fetchProfile();
-  }, [auth, toast]);
+  }, [auth, toast, db]);
 
   const saveProfile = async (updatedProfile: Profile) => {
     setIsSaving(true);
@@ -92,6 +111,7 @@ export const ProfileView = () => {
         throw new Error("Utilisateur non connecté");
       }
 
+      // Sauvegarder dans l'API
       const token = await user.getIdToken();
       const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/update-profile`, {
         method: 'POST',
@@ -105,6 +125,11 @@ export const ProfileView = () => {
       if (!response.ok) {
         throw new Error(`Erreur: ${response.status}`);
       }
+
+      // Sauvegarder également dans Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, { profile: updatedProfile }, { merge: true });
+      console.log("Profil mis à jour dans Firestore");
 
       toast({
         title: "Profil enregistré",

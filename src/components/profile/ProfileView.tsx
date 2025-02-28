@@ -136,20 +136,28 @@ export const ProfileView = () => {
       }
 
       // Sauvegarder d'abord dans Firestore pour garantir la persistence locale
+      let firestoreSaveSuccess = false;
       try {
         const userDocRef = doc(db, "users", user.uid);
         await setDoc(userDocRef, { cv_data: updatedProfile }, { merge: true });
         console.log("Profil mis à jour dans Firestore sous cv_data");
+        firestoreSaveSuccess = true;
       } catch (firestoreError) {
         console.error("Erreur lors de la sauvegarde dans Firestore:", firestoreError);
         toast({
           variant: "destructive",
           title: "Erreur lors de la sauvegarde locale",
-          description: "Vos modifications ont été temporairement enregistrées mais pourront être perdues à la fermeture de l'application.",
+          description: "Vos modifications n'ont pas pu être enregistrées. Veuillez réessayer.",
         });
+        setIsSaving(false);
+        return;
       }
 
+      // Sauvegarder dans l'état local pour refléter les modifications immédiatement
+      setProfile(updatedProfile);
+
       // Essayer ensuite de sauvegarder dans l'API 
+      let apiSaveSuccess = false;
       try {
         const token = await user.getIdToken();
         const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/update-profile`, {
@@ -167,25 +175,25 @@ export const ProfileView = () => {
         }
         
         console.log("Profil mis à jour avec succès sur l'API");
+        apiSaveSuccess = true;
       } catch (apiError) {
         console.error("Erreur lors de la sauvegarde sur l'API:", apiError);
         // Ne pas faire échouer la sauvegarde juste parce que l'API a échoué
         // Les données sont déjà dans Firestore
-        toast({
-          variant: "warning",
-          title: "Synchronisation partielle",
-          description: "Vos modifications ont été enregistrées localement mais n'ont pas pu être synchronisées avec le serveur. Elles seront synchronisées ultérieurement.",
-        });
-        // Mais on ne fait pas échouer la fonction
-        setIsSaving(false);
-        return;
       }
 
-      // Si tout s'est bien passé
-      toast({
-        title: "Profil enregistré",
-        description: "Les modifications ont été sauvegardées avec succès.",
-      });
+      // Message approprié en fonction des succès/échecs
+      if (firestoreSaveSuccess && apiSaveSuccess) {
+        toast({
+          title: "Profil enregistré",
+          description: "Les modifications ont été sauvegardées avec succès localement et sur le serveur.",
+        });
+      } else if (firestoreSaveSuccess) {
+        toast({
+          title: "Profil enregistré localement",
+          description: "Les modifications ont été sauvegardées localement mais n'ont pas pu être synchronisées avec le serveur.",
+        });
+      }
     } catch (error) {
       console.error("Erreur lors de l'enregistrement du profil:", error);
       toast({

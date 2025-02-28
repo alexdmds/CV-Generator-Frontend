@@ -37,7 +37,7 @@ export const ProfileForm = () => {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/generate-profile/${user.uid}`, {
+      const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/generate-profile`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

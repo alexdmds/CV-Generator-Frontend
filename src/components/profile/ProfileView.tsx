@@ -39,6 +39,7 @@ export const ProfileView = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<number>(0);
   const { toast } = useToast();
   const auth = getAuth();
   const db = getFirestore();
@@ -139,6 +140,7 @@ export const ProfileView = () => {
     // Définir un nouveau timer pour sauvegarder après un délai
     saveTimeoutRef.current = setTimeout(() => {
       saveProfile(updatedProfile);
+      saveTimeoutRef.current = null;  // Marquer comme terminé
     }, 2000); // 2 secondes de délai
   }, []);
 
@@ -183,6 +185,9 @@ export const ProfileView = () => {
       // Sauvegarder dans l'état local pour refléter les modifications immédiatement
       setProfile(updatedProfile);
 
+      // Marquer l'heure de la dernière sauvegarde
+      setLastSavedTime(Date.now());
+
       // Essayer de sauvegarder dans l'API
       try {
         const token = await user.getIdToken();
@@ -205,14 +210,6 @@ export const ProfileView = () => {
         console.error("Erreur lors de la sauvegarde sur l'API:", apiError);
         // Ne pas faire échouer la sauvegarde juste parce que l'API a échoué
         // Les données sont déjà dans Firestore
-      }
-
-      // Afficher un toast seulement lors de la sauvegarde manuelle (pas auto)
-      if (!saveTimeoutRef.current) {
-        toast({
-          title: "Profil enregistré",
-          description: "Les modifications ont été sauvegardées avec succès.",
-        });
       }
     } catch (error) {
       console.error("Erreur lors de l'enregistrement du profil:", error);
@@ -293,6 +290,7 @@ export const ProfileView = () => {
                 const updatedProfile = { ...profile, head };
                 debouncedSave(updatedProfile);
               }}
+              lastSavedTime={lastSavedTime}
             />
           </TabsContent>
 
@@ -315,6 +313,7 @@ export const ProfileView = () => {
                 };
                 debouncedSave(updatedProfile);
               }}
+              lastSavedTime={lastSavedTime}
             />
           </TabsContent>
 
@@ -337,6 +336,7 @@ export const ProfileView = () => {
                 };
                 debouncedSave(updatedProfile);
               }}
+              lastSavedTime={lastSavedTime}
             />
           </TabsContent>
 
@@ -353,6 +353,7 @@ export const ProfileView = () => {
                 const updatedProfile = { ...profile, skills };
                 debouncedSave(updatedProfile);
               }}
+              lastSavedTime={lastSavedTime}
             />
           </TabsContent>
 
@@ -369,6 +370,7 @@ export const ProfileView = () => {
                 const updatedProfile = { ...profile, hobbies };
                 debouncedSave(updatedProfile);
               }}
+              lastSavedTime={lastSavedTime}
             />
           </TabsContent>
         </Tabs>
@@ -396,20 +398,25 @@ const savedAnimation = `
 const HeadForm = ({ 
   initialData, 
   onSave,
-  onAutoSave 
+  onAutoSave,
+  lastSavedTime
 }: { 
   initialData: Profile['head'], 
   onSave: (data: Profile['head']) => void,
-  onAutoSave: (data: Profile['head']) => void 
+  onAutoSave: (data: Profile['head']) => void,
+  lastSavedTime: number
 }) => {
   const form = useForm({
     defaultValues: initialData,
   });
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
+  const lastChangedTimeRef = useRef<number>(0);
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
     const subscription = form.watch((value) => {
+      // Marquer l'heure du dernier changement
+      lastChangedTimeRef.current = Date.now();
       // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
       onAutoSave(value as Profile['head']);
@@ -419,29 +426,25 @@ const HeadForm = ({
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // Lorsque le timer de sauvegarde se déclenche (après 2 secondes d'inactivité)
-      if (saveTimeoutRef.current === null) {
-        // Marquer tous les champs comme sauvegardés
-        const fields = Object.keys(form.getValues());
-        const newSavedFields: Record<string, boolean> = {};
-        fields.forEach(field => {
-          newSavedFields[field] = true;
-        });
-        setSavedFields(newSavedFields);
-        
-        // Réinitialiser l'effet après 1.5 secondes
-        setTimeout(() => {
-          setSavedFields({});
-        }, 1500);
-      }
-    }, 2100); // Un peu plus que le délai de sauvegarde (2000 ms)
-    
-    return () => clearTimeout(timer);
-  }, [form]);
-
-  // Référence au timeout de sauvegarde pour vérifier quand la sauvegarde est terminée
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Seulement si une sauvegarde a eu lieu et après un changement
+    if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
+      console.log("Sauvegarde détectée, affichage de l'animation");
+      // Marquer tous les champs comme sauvegardés
+      const fields = Object.keys(form.getValues());
+      const newSavedFields: Record<string, boolean> = {};
+      fields.forEach(field => {
+        newSavedFields[field] = true;
+      });
+      setSavedFields(newSavedFields);
+      
+      // Réinitialiser l'effet après 1.5 secondes
+      const timer = setTimeout(() => {
+        setSavedFields({});
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastSavedTime, form]);
 
   return (
     <Form {...form}>
@@ -522,17 +525,22 @@ const HeadForm = ({
 const ExperiencesForm = ({ 
   initialData, 
   onSave,
-  onAutoSave 
+  onAutoSave,
+  lastSavedTime
 }: { 
   initialData: Profile['experiences']['experiences'], 
   onSave: (data: Profile['experiences']['experiences']) => void,
-  onAutoSave: (data: Profile['experiences']['experiences']) => void 
+  onAutoSave: (data: Profile['experiences']['experiences']) => void,
+  lastSavedTime: number
 }) => {
   const [experiences, setExperiences] = useState(initialData);
   const [savedSections, setSavedSections] = useState<boolean>(false);
+  const lastChangedTimeRef = useRef<number>(0);
 
   // Surveiller les changements pour déclencher l'auto-sauvegarde
   useEffect(() => {
+    // Marquer l'heure du dernier changement
+    lastChangedTimeRef.current = Date.now();
     // Réinitialiser l'animation lors d'un changement
     setSavedSections(false);
     onAutoSave(experiences);
@@ -540,17 +548,19 @@ const ExperiencesForm = ({
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Seulement si une sauvegarde a eu lieu et après un changement
+    if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
+      console.log("Sauvegarde détectée, affichage de l'animation pour les expériences");
       setSavedSections(true);
       
       // Réinitialiser après 1.5 secondes
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setSavedSections(false);
       }, 1500);
-    }, 2100); // Un peu plus que le délai de sauvegarde
-    
-    return () => clearTimeout(timer);
-  }, [experiences]);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastSavedTime]);
 
   const addExperience = () => {
     setExperiences([...experiences, {
@@ -660,17 +670,22 @@ const ExperiencesForm = ({
 const EducationForm = ({ 
   initialData, 
   onSave,
-  onAutoSave 
+  onAutoSave,
+  lastSavedTime 
 }: { 
   initialData: Profile['education']['educations'], 
   onSave: (data: Profile['education']['educations']) => void,
-  onAutoSave: (data: Profile['education']['educations']) => void
+  onAutoSave: (data: Profile['education']['educations']) => void,
+  lastSavedTime: number
 }) => {
   const [educations, setEducations] = useState(initialData);
   const [savedSections, setSavedSections] = useState<boolean>(false);
+  const lastChangedTimeRef = useRef<number>(0);
 
   // Surveiller les changements pour déclencher l'auto-sauvegarde
   useEffect(() => {
+    // Marquer l'heure du dernier changement
+    lastChangedTimeRef.current = Date.now();
     // Réinitialiser l'animation lors d'un changement
     setSavedSections(false);
     onAutoSave(educations);
@@ -678,17 +693,19 @@ const EducationForm = ({
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Seulement si une sauvegarde a eu lieu et après un changement
+    if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
+      console.log("Sauvegarde détectée, affichage de l'animation pour les formations");
       setSavedSections(true);
       
       // Réinitialiser après 1.5 secondes
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setSavedSections(false);
       }, 1500);
-    }, 2100); // Un peu plus que le délai de sauvegarde
-    
-    return () => clearTimeout(timer);
-  }, [educations]);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastSavedTime]);
 
   const addEducation = () => {
     setEducations([...educations, {
@@ -788,20 +805,25 @@ const EducationForm = ({
 const SkillsForm = ({ 
   initialData, 
   onSave,
-  onAutoSave 
+  onAutoSave,
+  lastSavedTime 
 }: { 
   initialData: Profile['skills'], 
   onSave: (data: Profile['skills']) => void,
-  onAutoSave: (data: Profile['skills']) => void 
+  onAutoSave: (data: Profile['skills']) => void,
+  lastSavedTime: number 
 }) => {
   const form = useForm({
     defaultValues: initialData,
   });
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
+  const lastChangedTimeRef = useRef<number>(0);
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
     const subscription = form.watch((value) => {
+      // Marquer l'heure du dernier changement
+      lastChangedTimeRef.current = Date.now();
       // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
       onAutoSave(value as Profile['skills']);
@@ -811,7 +833,9 @@ const SkillsForm = ({
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Seulement si une sauvegarde a eu lieu et après un changement
+    if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
+      console.log("Sauvegarde détectée, affichage de l'animation pour les compétences");
       // Marquer tous les champs comme sauvegardés
       const fields = Object.keys(form.getValues());
       const newSavedFields: Record<string, boolean> = {};
@@ -821,13 +845,13 @@ const SkillsForm = ({
       setSavedFields(newSavedFields);
       
       // Réinitialiser l'effet après 1.5 secondes
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setSavedFields({});
       }, 1500);
-    }, 2100); // Un peu plus que le délai de sauvegarde
-    
-    return () => clearTimeout(timer);
-  }, [form]);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastSavedTime, form]);
 
   return (
     <Form {...form}>
@@ -861,20 +885,25 @@ const SkillsForm = ({
 const HobbiesForm = ({ 
   initialData, 
   onSave,
-  onAutoSave 
+  onAutoSave,
+  lastSavedTime
 }: { 
   initialData: Profile['hobbies'], 
   onSave: (data: Profile['hobbies']) => void,
-  onAutoSave: (data: Profile['hobbies']) => void
+  onAutoSave: (data: Profile['hobbies']) => void,
+  lastSavedTime: number
 }) => {
   const form = useForm({
     defaultValues: initialData,
   });
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
+  const lastChangedTimeRef = useRef<number>(0);
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
     const subscription = form.watch((value) => {
+      // Marquer l'heure du dernier changement
+      lastChangedTimeRef.current = Date.now();
       // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
       onAutoSave(value as Profile['hobbies']);
@@ -884,7 +913,9 @@ const HobbiesForm = ({
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Seulement si une sauvegarde a eu lieu et après un changement
+    if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
+      console.log("Sauvegarde détectée, affichage de l'animation pour les loisirs");
       // Marquer tous les champs comme sauvegardés
       const fields = Object.keys(form.getValues());
       const newSavedFields: Record<string, boolean> = {};
@@ -894,13 +925,13 @@ const HobbiesForm = ({
       setSavedFields(newSavedFields);
       
       // Réinitialiser l'effet après 1.5 secondes
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setSavedFields({});
       }, 1500);
-    }, 2100); // Un peu plus que le délai de sauvegarde
-    
-    return () => clearTimeout(timer);
-  }, [form]);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastSavedTime, form]);
 
   return (
     <Form {...form}>

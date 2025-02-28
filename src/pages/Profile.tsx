@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { TokenCounter } from "@/components/profile/TokenCounter";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -33,7 +32,7 @@ const Profile = () => {
         ) : (
           <ProfileView />
         )}
-        <div className="mt-8 mb-8 flex justify-center">
+        <div className="mt-8 flex justify-center">
           <Button
             onClick={() => navigate("/resumes")}
             className="flex items-center gap-2"
@@ -43,9 +42,6 @@ const Profile = () => {
             Accéder à mes CVs
             <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
-        </div>
-        <div className="mt-4">
-          <TokenCounter />
         </div>
       </div>
     </div>

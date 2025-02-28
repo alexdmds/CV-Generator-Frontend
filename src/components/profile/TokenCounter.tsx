@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { useToast } from "@/hooks/use-toast";
 
 export const TokenCounter = () => {
   const [tokens, setTokens] = useState<number>(0);
@@ -14,7 +13,6 @@ export const TokenCounter = () => {
   const [retryCount, setRetryCount] = useState(0);
   const MAX_TOKENS = 1000000; // Limite définie à un million
   const MAX_RETRIES = 3;
-  const { toast } = useToast();
 
   useEffect(() => {
     const auth = getAuth();
@@ -32,7 +30,7 @@ export const TokenCounter = () => {
           const data = tokenDoc.data();
           console.log("Données de tokens récupérées:", data);
           
-          if (data && typeof data.total_tokens === 'number') {
+          if (typeof data.total_tokens === 'number') {
             return data.total_tokens;
           } else {
             console.warn("Format de données invalide, 'total_tokens' n'est pas un nombre:", data);
@@ -61,26 +59,17 @@ export const TokenCounter = () => {
           const userId = user.uid;
           const totalTokens = await fetchTokensFromFirestore(userId);
           setTokens(totalTokens);
-          setError(null);
           setRetryCount(0);
+          setError(null);
         } catch (err) {
           console.error("Erreur détaillée lors de la récupération des tokens:", err);
           
           if (retryCount < MAX_RETRIES) {
-            const nextRetryCount = retryCount + 1;
             const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
             console.log(`Nouvelle tentative dans ${delay}ms...`);
-            
-            setTimeout(() => {
-              setRetryCount(nextRetryCount);
-            }, delay);
+            setTimeout(() => setRetryCount(prev => prev + 1), delay);
           } else {
             setError("Erreur lors de la récupération des tokens");
-            toast({
-              title: "Erreur",
-              description: "Impossible de récupérer les tokens utilisateur",
-              variant: "destructive",
-            });
           }
         } finally {
           setLoading(false);
@@ -95,7 +84,7 @@ export const TokenCounter = () => {
         unsubscribe();
       }
     };
-  }, [retryCount, toast]);
+  }, [retryCount]);
 
   const percentage = (tokens / MAX_TOKENS) * 100;
 

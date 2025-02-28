@@ -1,5 +1,6 @@
 
 import { ProfileForm } from "@/components/profile/ProfileForm";
+import { ProfileView } from "@/components/profile/ProfileView";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
@@ -13,6 +14,7 @@ const Profile = () => {
       <Navbar />
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <ProfileForm />
+        <ProfileView />
         <div className="mt-8 flex justify-center">
           <Button
             onClick={() => navigate("/resumes")}

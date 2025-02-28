@@ -63,14 +63,15 @@ export const ProfileView = () => {
         if (userDoc.exists()) {
           console.log("Contenu du document Firestore:", userDoc.data());
           
-          if (userDoc.data().profile) {
-            // Profil trouvé dans Firestore
-            console.log("Profil récupéré depuis Firestore:", userDoc.data().profile);
-            setProfile(userDoc.data().profile as Profile);
+          // Vérifie si le document contient la clé "cv_data"
+          if (userDoc.data().cv_data) {
+            // Profil trouvé dans Firestore sous la clé "cv_data"
+            console.log("Profil récupéré depuis Firestore (cv_data):", userDoc.data().cv_data);
+            setProfile(userDoc.data().cv_data as Profile);
             setIsLoading(false);
             return;
           } else {
-            console.log("Le document existe mais ne contient pas de profil");
+            console.log("Le document existe mais ne contient pas la clé 'cv_data'");
           }
         }
 
@@ -103,8 +104,9 @@ export const ProfileView = () => {
         
         // Sauvegarder le profil dans Firestore pour un accès futur
         try {
-          await setDoc(userDocRef, { profile: data }, { merge: true });
-          console.log("Profil sauvegardé dans Firestore");
+          // Sauvegarde le profil sous la clé "cv_data"
+          await setDoc(userDocRef, { cv_data: data }, { merge: true });
+          console.log("Profil sauvegardé dans Firestore sous cv_data");
         } catch (firestoreError) {
           console.error("Erreur lors de la sauvegarde dans Firestore:", firestoreError);
         }
@@ -148,10 +150,10 @@ export const ProfileView = () => {
         throw new Error(`Erreur: ${response.status}`);
       }
 
-      // Sauvegarder également dans Firestore
+      // Sauvegarder également dans Firestore sous la clé "cv_data"
       const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, { profile: updatedProfile }, { merge: true });
-      console.log("Profil mis à jour dans Firestore");
+      await setDoc(userDocRef, { cv_data: updatedProfile }, { merge: true });
+      console.log("Profil mis à jour dans Firestore sous cv_data");
 
       toast({
         title: "Profil enregistré",

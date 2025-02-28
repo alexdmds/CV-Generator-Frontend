@@ -7,10 +7,9 @@ import { PhotoUpload } from "./PhotoUpload";
 import { DocumentList } from "./DocumentList";
 import { LastGeneration } from "./LastGeneration";
 import { TokenCounter } from "./TokenCounter";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, doc, getDoc, updateDoc, increment } from "firebase/firestore";
 
 // Import des composants d'alerte
 import {
@@ -28,9 +27,10 @@ import {
 interface ProfileFormProps {
   isGenerating: boolean;
   setIsGenerating: (isGenerating: boolean) => void;
+  refreshTokens: () => void;
 }
 
-export const ProfileForm = ({ isGenerating, setIsGenerating }: ProfileFormProps) => {
+export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: ProfileFormProps) => {
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const auth = getAuth();
@@ -75,32 +75,14 @@ export const ProfileForm = ({ isGenerating, setIsGenerating }: ProfileFormProps)
       const data = await response.json();
       console.log("Profil généré avec succès:", data);
 
-      // Mise à jour du compteur de tokens dans Firestore
-      const db = getFirestore();
-      const tokenStatsRef = doc(db, "token_stats", user.uid);
-
-      // Vérifier si le document existe déjà
-      const tokenStatsDoc = await getDoc(tokenStatsRef);
-      
-      // Estimation approximative des tokens utilisés pour chaque génération
-      const tokensUsed = 50000; // Valeur arbitraire à ajuster selon vos besoins
-
-      if (tokenStatsDoc.exists()) {
-        // Incrémenter le compteur existant
-        await updateDoc(tokenStatsRef, {
-          total_tokens: increment(tokensUsed)
-        });
-      } else {
-        // Créer un nouveau document
-        await updateDoc(tokenStatsRef, {
-          total_tokens: tokensUsed
-        });
-      }
-
       toast({
         title: "Profil généré",
         description: "Votre profil a été généré avec succès !",
       });
+      
+      // Rafraîchir le compteur de tokens après une génération réussie
+      refreshTokens();
+      
     } catch (error) {
       console.error("Erreur lors de la génération du profil:", error);
       toast({

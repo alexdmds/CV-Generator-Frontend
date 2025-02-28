@@ -5,23 +5,34 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { TokenCounter } from "@/components/profile/TokenCounter";
 
 const Profile = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
+  const refreshTokensRef = useRef<() => void>(() => {});
+
+  // Fonction pour actualiser le compteur de tokens
+  const setRefreshTokensFunction = useCallback((fn: () => void) => {
+    refreshTokensRef.current = fn;
+  }, []);
+
+  const handleRefreshTokens = useCallback(() => {
+    refreshTokensRef.current();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto mb-8">
-          <TokenCounter />
+          <TokenCounter onRefreshRequest={setRefreshTokensFunction} />
         </div>
         <ProfileForm 
           isGenerating={isGenerating} 
-          setIsGenerating={setIsGenerating} 
+          setIsGenerating={setIsGenerating}
+          refreshTokens={handleRefreshTokens}
         />
         {isGenerating ? (
           <div className="mt-10 flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow animate-pulse">

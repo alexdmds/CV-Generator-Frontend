@@ -6,7 +6,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 
-export const TokenCounter = () => {
+export const TokenCounter = ({ onRefreshRequest }: { onRefreshRequest?: () => void }) => {
   const [tokens, setTokens] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +82,13 @@ export const TokenCounter = () => {
       }
     };
   }, [fetchTokens]);
+
+  // Permettre au parent de déclencher une actualisation des tokens
+  useEffect(() => {
+    if (onRefreshRequest) {
+      onRefreshRequest = fetchTokens;
+    }
+  }, [fetchTokens, onRefreshRequest]);
 
   const percentage = (tokens / MAX_TOKENS) * 100;
 

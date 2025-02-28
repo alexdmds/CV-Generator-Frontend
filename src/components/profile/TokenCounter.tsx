@@ -4,52 +4,46 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { useToast } from "@/components/ui/use-toast";
 
 export const TokenCounter = () => {
   const [tokens, setTokens] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_TOKENS = 100000;
+  const MAX_TOKENS = 1000000;
   const MAX_RETRIES = 3;
+  const { toast } = useToast();
 
   useEffect(() => {
     const auth = getAuth();
+    const db = getFirestore();
     let unsubscribe: () => void;
 
-    const fetchTokens = async (idToken: string) => {
-      console.log("Tentative de récupération des tokens...");
-      console.log("Token utilisé:", idToken.substring(0, 10) + "...");
+    const fetchTokens = async (userId: string) => {
+      console.log("Tentative de récupération des tokens depuis Firestore...");
       
       try {
-        const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/get-total-tokens`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-          mode: 'cors',
-        });
-
-        console.log("Statut de la réponse:", response.status);
+        const tokenStatsRef = doc(db, "token_stats", userId);
+        const tokenStatsDoc = await getDoc(tokenStatsRef);
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Erreur détaillée:", errorText);
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (tokenStatsDoc.exists()) {
+          const data = tokenStatsDoc.data();
+          console.log("Données de tokens reçues:", data);
+          
+          if (typeof data.total_tokens === 'number') {
+            return data.total_tokens;
+          } else {
+            console.log("Format de tokens invalide:", data.total_tokens);
+            return 0;
+          }
+        } else {
+          console.log("Aucun document de tokens trouvé pour l'utilisateur");
+          return 0;
         }
-
-        const data = await response.json();
-        console.log("Données reçues:", data);
-        
-        if (typeof data.total_tokens !== 'number') {
-          throw new Error("Format de données invalide");
-        }
-        return data.total_tokens;
       } catch (error) {
-        console.error("Erreur complète:", error);
+        console.error("Erreur complète lors de la récupération des tokens:", error);
         throw error;
       }
     };
@@ -63,9 +57,8 @@ export const TokenCounter = () => {
         }
 
         try {
-          console.log("Utilisateur connecté, récupération du token...");
-          const idToken = await user.getIdToken();
-          const totalTokens = await fetchTokens(idToken);
+          console.log("Utilisateur connecté, récupération des tokens...");
+          const totalTokens = await fetchTokens(user.uid);
           setTokens(totalTokens);
           setRetryCount(0);
           setError(null);
@@ -78,6 +71,11 @@ export const TokenCounter = () => {
             setTimeout(() => setRetryCount(prev => prev + 1), delay);
           } else {
             setError("Erreur lors de la récupération des tokens");
+            toast({
+              variant: "destructive",
+              title: "Erreur",
+              description: "Impossible de récupérer les informations de tokens."
+            });
           }
         } finally {
           setLoading(false);
@@ -92,7 +90,7 @@ export const TokenCounter = () => {
         unsubscribe();
       }
     };
-  }, [retryCount]);
+  }, [retryCount, toast]);
 
   const percentage = (tokens / MAX_TOKENS) * 100;
 

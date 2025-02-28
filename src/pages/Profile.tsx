@@ -1,6 +1,7 @@
 
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { ProfileView } from "@/components/profile/ProfileView";
+import { TokenCounter } from "@/components/profile/TokenCounter";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
@@ -30,7 +31,12 @@ const Profile = () => {
             </p>
           </div>
         ) : (
-          <ProfileView />
+          <div>
+            <div className="mt-6 mb-6">
+              <TokenCounter />
+            </div>
+            <ProfileView />
+          </div>
         )}
         <div className="mt-8 flex justify-center">
           <Button

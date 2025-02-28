@@ -11,7 +11,7 @@ import { getAuth } from "firebase/auth";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, Trash2, User, Briefcase, GraduationCap, Brain, Heart } from "lucide-react";
+import { PlusCircle, Trash2, User, Briefcase, GraduationCap, Brain, Heart, Save } from "lucide-react";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
 const emptyProfile: Profile = {
@@ -39,12 +39,12 @@ export const ProfileView = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<number>(0);
   const { toast } = useToast();
   const auth = getAuth();
   const db = getFirestore();
-  // Timer pour l'auto-sauvegarde
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const originalProfileRef = useRef<Profile | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -70,7 +70,9 @@ export const ProfileView = () => {
           if (userDoc.data().cv_data) {
             // Profil trouvé dans Firestore sous la clé "cv_data"
             console.log("Profil récupéré depuis Firestore (cv_data):", userDoc.data().cv_data);
-            setProfile(userDoc.data().cv_data as Profile);
+            const loadedProfile = userDoc.data().cv_data as Profile;
+            setProfile(loadedProfile);
+            originalProfileRef.current = JSON.parse(JSON.stringify(loadedProfile)); // Copie profonde pour la comparaison
             setIsLoading(false);
             return;
           } else {
@@ -95,6 +97,7 @@ export const ProfileView = () => {
           if (response.status === 404) {
             console.log("Profil non trouvé dans l'API, utilisation d'un profil vide");
             setProfile(emptyProfile);
+            originalProfileRef.current = JSON.parse(JSON.stringify(emptyProfile));
             setIsLoading(false);
             return;
           }
@@ -104,6 +107,7 @@ export const ProfileView = () => {
         const data = await response.json();
         console.log("Profil récupéré depuis l'API:", data);
         setProfile(data);
+        originalProfileRef.current = JSON.parse(JSON.stringify(data));
         
         // Sauvegarder le profil dans Firestore pour un accès futur
         try {
@@ -122,6 +126,7 @@ export const ProfileView = () => {
         });
         // En cas d'erreur, on essaie quand même d'afficher un profil vide
         setProfile(emptyProfile);
+        originalProfileRef.current = JSON.parse(JSON.stringify(emptyProfile));
       } finally {
         setIsLoading(false);
       }
@@ -130,32 +135,18 @@ export const ProfileView = () => {
     fetchProfile();
   }, [auth, toast, db]);
 
-  // Fonction de sauvegarde avec debounce
-  const debouncedSave = useCallback((updatedProfile: Profile) => {
-    // Annuler le timer précédent s'il existe
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+  // Fonction pour vérifier si le profil a changé
+  const checkForChanges = useCallback((updatedProfile: Profile) => {
+    if (!originalProfileRef.current) return false;
     
-    // Définir un nouveau timer pour sauvegarder après un délai
-    saveTimeoutRef.current = setTimeout(() => {
-      saveProfile(updatedProfile);
-      saveTimeoutRef.current = null;  // Marquer comme terminé
-    }, 2000); // 2 secondes de délai
+    // Comparaison stricte pour détecter les changements
+    const hasChanged = JSON.stringify(updatedProfile) !== JSON.stringify(originalProfileRef.current);
+    setHasChanges(hasChanged);
+    return hasChanged;
   }, []);
 
-  // Effet pour nettoyer le timer lors du démontage du composant
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const saveProfile = async (updatedProfile: Profile) => {
-    // Si déjà en train de sauvegarder, ne pas lancer une nouvelle sauvegarde
-    if (isSaving) return;
+  const saveProfile = async () => {
+    if (!profile) return;
     
     setIsSaving(true);
     try {
@@ -165,12 +156,24 @@ export const ProfileView = () => {
       }
 
       // Sauvegarder dans Firestore
-      let firestoreSaveSuccess = false;
       try {
         const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, { cv_data: updatedProfile }, { merge: true });
+        await setDoc(userDocRef, { cv_data: profile }, { merge: true });
         console.log("Profil mis à jour dans Firestore sous cv_data");
-        firestoreSaveSuccess = true;
+        
+        // Mettre à jour la référence du profil original après sauvegarde
+        originalProfileRef.current = JSON.parse(JSON.stringify(profile));
+        
+        // Marquer l'absence de changements
+        setHasChanges(false);
+        
+        // Marquer l'heure de la dernière sauvegarde
+        setLastSavedTime(Date.now());
+        
+        toast({
+          title: "Profil sauvegardé",
+          description: "Vos modifications ont été enregistrées avec succès.",
+        });
       } catch (firestoreError) {
         console.error("Erreur lors de la sauvegarde dans Firestore:", firestoreError);
         toast({
@@ -182,12 +185,6 @@ export const ProfileView = () => {
         return;
       }
 
-      // Sauvegarder dans l'état local pour refléter les modifications immédiatement
-      setProfile(updatedProfile);
-
-      // Marquer l'heure de la dernière sauvegarde
-      setLastSavedTime(Date.now());
-
       // Essayer de sauvegarder dans l'API
       try {
         const token = await user.getIdToken();
@@ -197,7 +194,7 @@ export const ProfileView = () => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(updatedProfile),
+          body: JSON.stringify(profile),
         });
 
         if (!response.ok) {
@@ -249,8 +246,21 @@ export const ProfileView = () => {
 
   return (
     <Card className="w-full max-w-4xl mx-auto mt-6">
-      <CardHeader>
+      <CardHeader className="relative">
         <CardTitle className="text-2xl font-bold">Mon Profil</CardTitle>
+        {hasChanges && (
+          <div className="absolute right-4 top-4">
+            <Button 
+              onClick={saveProfile} 
+              disabled={isSaving}
+              className="flex items-center gap-2"
+              variant="outline"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? "Sauvegarde..." : "Sauvegarder les modifications"}
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="head" className="w-full">
@@ -284,11 +294,7 @@ export const ProfileView = () => {
               onSave={(head) => {
                 const updatedProfile = { ...profile, head };
                 setProfile(updatedProfile);
-                saveProfile(updatedProfile);
-              }}
-              onAutoSave={(head) => {
-                const updatedProfile = { ...profile, head };
-                debouncedSave(updatedProfile);
+                checkForChanges(updatedProfile);
               }}
               lastSavedTime={lastSavedTime}
             />
@@ -304,14 +310,7 @@ export const ProfileView = () => {
                   experiences: { experiences } 
                 };
                 setProfile(updatedProfile);
-                saveProfile(updatedProfile);
-              }}
-              onAutoSave={(experiences) => {
-                const updatedProfile = { 
-                  ...profile, 
-                  experiences: { experiences } 
-                };
-                debouncedSave(updatedProfile);
+                checkForChanges(updatedProfile);
               }}
               lastSavedTime={lastSavedTime}
             />
@@ -327,14 +326,7 @@ export const ProfileView = () => {
                   education: { educations } 
                 };
                 setProfile(updatedProfile);
-                saveProfile(updatedProfile);
-              }}
-              onAutoSave={(educations) => {
-                const updatedProfile = { 
-                  ...profile, 
-                  education: { educations } 
-                };
-                debouncedSave(updatedProfile);
+                checkForChanges(updatedProfile);
               }}
               lastSavedTime={lastSavedTime}
             />
@@ -347,11 +339,7 @@ export const ProfileView = () => {
               onSave={(skills) => {
                 const updatedProfile = { ...profile, skills };
                 setProfile(updatedProfile);
-                saveProfile(updatedProfile);
-              }}
-              onAutoSave={(skills) => {
-                const updatedProfile = { ...profile, skills };
-                debouncedSave(updatedProfile);
+                checkForChanges(updatedProfile);
               }}
               lastSavedTime={lastSavedTime}
             />
@@ -364,11 +352,7 @@ export const ProfileView = () => {
               onSave={(hobbies) => {
                 const updatedProfile = { ...profile, hobbies };
                 setProfile(updatedProfile);
-                saveProfile(updatedProfile);
-              }}
-              onAutoSave={(hobbies) => {
-                const updatedProfile = { ...profile, hobbies };
-                debouncedSave(updatedProfile);
+                checkForChanges(updatedProfile);
               }}
               lastSavedTime={lastSavedTime}
             />
@@ -398,12 +382,10 @@ const savedAnimation = `
 const HeadForm = ({ 
   initialData, 
   onSave,
-  onAutoSave,
   lastSavedTime
 }: { 
   initialData: Profile['head'], 
   onSave: (data: Profile['head']) => void,
-  onAutoSave: (data: Profile['head']) => void,
   lastSavedTime: number
 }) => {
   const form = useForm({
@@ -412,17 +394,17 @@ const HeadForm = ({
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
+  // Observer pour détecter les changements de champ
   useEffect(() => {
     const subscription = form.watch((value) => {
       // Marquer l'heure du dernier changement
       lastChangedTimeRef.current = Date.now();
       // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
-      onAutoSave(value as Profile['head']);
+      onSave(value as Profile['head']);
     });
     return () => subscription.unsubscribe();
-  }, [form, onAutoSave]);
+  }, [form, onSave]);
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
@@ -513,9 +495,6 @@ const HeadForm = ({
             </FormItem>
           )}
         />
-        <div className="text-xs text-muted-foreground text-center mt-2">
-          Les modifications sont automatiquement enregistrées lors de la saisie
-        </div>
       </form>
     </Form>
   );
@@ -525,26 +504,24 @@ const HeadForm = ({
 const ExperiencesForm = ({ 
   initialData, 
   onSave,
-  onAutoSave,
   lastSavedTime
 }: { 
   initialData: Profile['experiences']['experiences'], 
   onSave: (data: Profile['experiences']['experiences']) => void,
-  onAutoSave: (data: Profile['experiences']['experiences']) => void,
   lastSavedTime: number
 }) => {
   const [experiences, setExperiences] = useState(initialData);
   const [savedSections, setSavedSections] = useState<boolean>(false);
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Surveiller les changements pour déclencher l'auto-sauvegarde
+  // Surveiller les changements
   useEffect(() => {
     // Marquer l'heure du dernier changement
     lastChangedTimeRef.current = Date.now();
     // Réinitialiser l'animation lors d'un changement
     setSavedSections(false);
-    onAutoSave(experiences);
-  }, [experiences, onAutoSave]);
+    onSave(experiences);
+  }, [experiences, onSave]);
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
@@ -659,9 +636,6 @@ const ExperiencesForm = ({
           Ajouter une expérience
         </Button>
       </div>
-      <div className="text-xs text-muted-foreground text-center mt-2">
-        Les modifications sont automatiquement enregistrées lors de la saisie
-      </div>
     </div>
   );
 };
@@ -670,26 +644,24 @@ const ExperiencesForm = ({
 const EducationForm = ({ 
   initialData, 
   onSave,
-  onAutoSave,
   lastSavedTime 
 }: { 
   initialData: Profile['education']['educations'], 
   onSave: (data: Profile['education']['educations']) => void,
-  onAutoSave: (data: Profile['education']['educations']) => void,
   lastSavedTime: number
 }) => {
   const [educations, setEducations] = useState(initialData);
   const [savedSections, setSavedSections] = useState<boolean>(false);
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Surveiller les changements pour déclencher l'auto-sauvegarde
+  // Surveiller les changements
   useEffect(() => {
     // Marquer l'heure du dernier changement
     lastChangedTimeRef.current = Date.now();
     // Réinitialiser l'animation lors d'un changement
     setSavedSections(false);
-    onAutoSave(educations);
-  }, [educations, onAutoSave]);
+    onSave(educations);
+  }, [educations, onSave]);
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
@@ -794,9 +766,6 @@ const EducationForm = ({
           Ajouter une formation
         </Button>
       </div>
-      <div className="text-xs text-muted-foreground text-center mt-2">
-        Les modifications sont automatiquement enregistrées lors de la saisie
-      </div>
     </div>
   );
 };
@@ -805,12 +774,10 @@ const EducationForm = ({
 const SkillsForm = ({ 
   initialData, 
   onSave,
-  onAutoSave,
   lastSavedTime 
 }: { 
   initialData: Profile['skills'], 
   onSave: (data: Profile['skills']) => void,
-  onAutoSave: (data: Profile['skills']) => void,
   lastSavedTime: number 
 }) => {
   const form = useForm({
@@ -819,17 +786,17 @@ const SkillsForm = ({
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
+  // Observer pour détecter les changements de champ
   useEffect(() => {
     const subscription = form.watch((value) => {
       // Marquer l'heure du dernier changement
       lastChangedTimeRef.current = Date.now();
       // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
-      onAutoSave(value as Profile['skills']);
+      onSave(value as Profile['skills']);
     });
     return () => subscription.unsubscribe();
-  }, [form, onAutoSave]);
+  }, [form, onSave]);
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
@@ -873,9 +840,6 @@ const SkillsForm = ({
             </FormItem>
           )}
         />
-        <div className="text-xs text-muted-foreground text-center mt-2">
-          Les modifications sont automatiquement enregistrées lors de la saisie
-        </div>
       </form>
     </Form>
   );
@@ -885,12 +849,10 @@ const SkillsForm = ({
 const HobbiesForm = ({ 
   initialData, 
   onSave,
-  onAutoSave,
   lastSavedTime
 }: { 
   initialData: Profile['hobbies'], 
   onSave: (data: Profile['hobbies']) => void,
-  onAutoSave: (data: Profile['hobbies']) => void,
   lastSavedTime: number
 }) => {
   const form = useForm({
@@ -899,17 +861,17 @@ const HobbiesForm = ({
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
+  // Observer pour détecter les changements de champ
   useEffect(() => {
     const subscription = form.watch((value) => {
       // Marquer l'heure du dernier changement
       lastChangedTimeRef.current = Date.now();
       // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
-      onAutoSave(value as Profile['hobbies']);
+      onSave(value as Profile['hobbies']);
     });
     return () => subscription.unsubscribe();
-  }, [form, onAutoSave]);
+  }, [form, onSave]);
 
   // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
@@ -953,9 +915,6 @@ const HobbiesForm = ({
             </FormItem>
           )}
         />
-        <div className="text-xs text-muted-foreground text-center mt-2">
-          Les modifications sont automatiquement enregistrées lors de la saisie
-        </div>
       </form>
     </Form>
   );

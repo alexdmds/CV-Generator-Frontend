@@ -22,7 +22,7 @@ export const TokenCounter = () => {
       console.log("Token utilisé:", idToken.substring(0, 10) + "...");
       
       try {
-        const response = await fetch(`https://backend-flask-177360827241.europe-west9.run.app/get-total-tokens`, {
+        const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/get-total-tokens`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${idToken}`,

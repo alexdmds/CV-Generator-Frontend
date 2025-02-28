@@ -11,7 +11,7 @@ import { getAuth } from "firebase/auth";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, Trash2, User, Briefcase, GraduationCap, Brain, Heart, Save } from "lucide-react";
+import { PlusCircle, Trash2, User, Briefcase, GraduationCap, Brain, Heart } from "lucide-react";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
 const emptyProfile: Profile = {
@@ -390,13 +390,6 @@ const HeadForm = ({
   const form = useForm({
     defaultValues: initialData,
   });
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSubmit = (data: Profile['head']) => {
-    setIsSaving(true);
-    onSave(data);
-    setIsSaving(false);
-  };
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
@@ -408,7 +401,7 @@ const HeadForm = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -457,10 +450,6 @@ const HeadForm = ({
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
-        </Button>
         <div className="text-xs text-muted-foreground text-center mt-2">
           Les modifications sont automatiquement enregistrées lors de la saisie
         </div>
@@ -480,7 +469,6 @@ const ExperiencesForm = ({
   onAutoSave: (data: Profile['experiences']['experiences']) => void 
 }) => {
   const [experiences, setExperiences] = useState(initialData);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Surveiller les changements pour déclencher l'auto-sauvegarde
   useEffect(() => {
@@ -508,12 +496,6 @@ const ExperiencesForm = ({
       [field]: value
     };
     setExperiences(updatedExperiences);
-  };
-
-  const handleSave = () => {
-    setIsSaving(true);
-    onSave(experiences);
-    setIsSaving(false);
   };
 
   return (
@@ -581,10 +563,6 @@ const ExperiencesForm = ({
           <PlusCircle className="mr-2 h-4 w-4" />
           Ajouter une expérience
         </Button>
-        <Button type="button" onClick={handleSave} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
-        </Button>
       </div>
       <div className="text-xs text-muted-foreground text-center mt-2">
         Les modifications sont automatiquement enregistrées lors de la saisie
@@ -604,7 +582,6 @@ const EducationForm = ({
   onAutoSave: (data: Profile['education']['educations']) => void
 }) => {
   const [educations, setEducations] = useState(initialData);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Surveiller les changements pour déclencher l'auto-sauvegarde
   useEffect(() => {
@@ -631,12 +608,6 @@ const EducationForm = ({
       [field]: value
     };
     setEducations(updatedEducations);
-  };
-
-  const handleSave = () => {
-    setIsSaving(true);
-    onSave(educations);
-    setIsSaving(false);
   };
 
   return (
@@ -696,10 +667,6 @@ const EducationForm = ({
           <PlusCircle className="mr-2 h-4 w-4" />
           Ajouter une formation
         </Button>
-        <Button type="button" onClick={handleSave} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
-        </Button>
       </div>
       <div className="text-xs text-muted-foreground text-center mt-2">
         Les modifications sont automatiquement enregistrées lors de la saisie
@@ -721,13 +688,6 @@ const SkillsForm = ({
   const form = useForm({
     defaultValues: initialData,
   });
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSubmit = (data: Profile['skills']) => {
-    setIsSaving(true);
-    onSave(data);
-    setIsSaving(false);
-  };
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
@@ -739,7 +699,7 @@ const SkillsForm = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <FormField
           control={form.control}
           name="description"
@@ -756,10 +716,6 @@ const SkillsForm = ({
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
-        </Button>
         <div className="text-xs text-muted-foreground text-center mt-2">
           Les modifications sont automatiquement enregistrées lors de la saisie
         </div>
@@ -781,13 +737,6 @@ const HobbiesForm = ({
   const form = useForm({
     defaultValues: initialData,
   });
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSubmit = (data: Profile['hobbies']) => {
-    setIsSaving(true);
-    onSave(data);
-    setIsSaving(false);
-  };
 
   // Observer pour détecter les changements de champ et déclencher la sauvegarde automatique
   useEffect(() => {
@@ -799,7 +748,7 @@ const HobbiesForm = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <FormField
           control={form.control}
           name="description"
@@ -816,10 +765,6 @@ const HobbiesForm = ({
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
-        </Button>
         <div className="text-xs text-muted-foreground text-center mt-2">
           Les modifications sont automatiquement enregistrées lors de la saisie
         </div>

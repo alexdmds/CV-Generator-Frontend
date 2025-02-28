@@ -11,9 +11,27 @@ import { useState } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
-export const ProfileForm = () => {
+// Import des composants d'alerte
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+interface ProfileFormProps {
+  isGenerating: boolean;
+  setIsGenerating: (isGenerating: boolean) => void;
+}
+
+export const ProfileForm = ({ isGenerating, setIsGenerating }: ProfileFormProps) => {
   const { toast } = useToast();
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const auth = getAuth();
   const navigate = useNavigate();
 
@@ -30,9 +48,11 @@ export const ProfileForm = () => {
     }
 
     setIsGenerating(true);
+    setConfirmOpen(false);
+    
     toast({
       title: "Génération du profil",
-      description: "La génération de votre profil a commencé. Cela peut prendre quelques minutes...",
+      description: "La génération de votre profil a commencé. Cela peut prendre jusqu'à 1 minute 30...",
     });
 
     try {
@@ -81,16 +101,38 @@ export const ProfileForm = () => {
         <div className="space-y-6">
           <PhotoUpload />
           <DocumentList />
-          <Button
-            type="button"
-            onClick={handleGenerateCV}
-            className="w-full"
-            variant="default"
-            disabled={isGenerating}
-          >
-            <FileText className="mr-2" />
-            {isGenerating ? "Génération en cours..." : "Générer mon profil"}
-          </Button>
+          
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                className="w-full"
+                variant="default"
+                disabled={isGenerating}
+              >
+                <FileText className="mr-2" />
+                {isGenerating ? "Génération en cours..." : "Générer mon profil"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Écraser les données actuelles ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Attention, cette action va générer un nouveau profil et écraser toutes les données que vous avez saisies manuellement. 
+                  Cette opération est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleGenerateCV}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  Continuer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>

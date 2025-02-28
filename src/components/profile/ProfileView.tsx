@@ -135,26 +135,53 @@ export const ProfileView = () => {
         throw new Error("Utilisateur non connecté");
       }
 
-      // Sauvegarder dans l'API
-      const token = await user.getIdToken();
-      const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/update-profile`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedProfile),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur: ${response.status}`);
+      // Sauvegarder d'abord dans Firestore pour garantir la persistence locale
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, { cv_data: updatedProfile }, { merge: true });
+        console.log("Profil mis à jour dans Firestore sous cv_data");
+      } catch (firestoreError) {
+        console.error("Erreur lors de la sauvegarde dans Firestore:", firestoreError);
+        toast({
+          variant: "destructive",
+          title: "Erreur lors de la sauvegarde locale",
+          description: "Vos modifications ont été temporairement enregistrées mais pourront être perdues à la fermeture de l'application.",
+        });
       }
 
-      // Sauvegarder également dans Firestore sous la clé "cv_data"
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, { cv_data: updatedProfile }, { merge: true });
-      console.log("Profil mis à jour dans Firestore sous cv_data");
+      // Essayer ensuite de sauvegarder dans l'API 
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/update-profile`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedProfile),
+        });
 
+        if (!response.ok) {
+          console.error("Erreur API:", response.status);
+          throw new Error(`Erreur lors de la sauvegarde sur l'API: ${response.status}`);
+        }
+        
+        console.log("Profil mis à jour avec succès sur l'API");
+      } catch (apiError) {
+        console.error("Erreur lors de la sauvegarde sur l'API:", apiError);
+        // Ne pas faire échouer la sauvegarde juste parce que l'API a échoué
+        // Les données sont déjà dans Firestore
+        toast({
+          variant: "warning",
+          title: "Synchronisation partielle",
+          description: "Vos modifications ont été enregistrées localement mais n'ont pas pu être synchronisées avec le serveur. Elles seront synchronisées ultérieurement.",
+        });
+        // Mais on ne fait pas échouer la fonction
+        setIsSaving(false);
+        return;
+      }
+
+      // Si tout s'est bien passé
       toast({
         title: "Profil enregistré",
         description: "Les modifications ont été sauvegardées avec succès.",

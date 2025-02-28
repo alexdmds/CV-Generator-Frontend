@@ -17,6 +17,7 @@ const queryClient = new QueryClient();
 const App = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -28,6 +29,9 @@ const App = () => {
           if (user) {
             const token = await user.getIdToken();
             localStorage.setItem('firebase_token', token);
+            setEmailVerified(user.emailVerified);
+          } else {
+            setEmailVerified(false);
           }
           setUser(user);
           setLoading(false);
@@ -54,10 +58,10 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={!user ? <Login /> : <Navigate to="/profile" />} />
-            <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" />} />
-            <Route path="/resumes" element={user ? <Resumes /> : <Navigate to="/" />} />
-            <Route path="/resumes/:id" element={user ? <ResumeForm /> : <Navigate to="/" />} />
+            <Route path="/" element={!user ? <Login /> : (emailVerified ? <Navigate to="/profile" /> : <Login />)} />
+            <Route path="/profile" element={user && emailVerified ? <Profile /> : <Navigate to="/" />} />
+            <Route path="/resumes" element={user && emailVerified ? <Resumes /> : <Navigate to="/" />} />
+            <Route path="/resumes/:id" element={user && emailVerified ? <ResumeForm /> : <Navigate to="/" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
@@ -67,4 +71,3 @@ const App = () => {
 };
 
 export default App;
-

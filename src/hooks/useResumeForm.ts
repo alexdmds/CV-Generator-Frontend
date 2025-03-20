@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { db, auth } from "@/components/auth/firebase-config";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
-import { CV } from "@/types/profile";
+import { CV, Profile } from "@/types/profile";
 
 export function useResumeForm() {
   const { id } = useParams();
@@ -112,18 +112,26 @@ export function useResumeForm() {
     }
 
     setIsSubmitting(true);
+    console.log("Saving CV to Firestore...");
 
     try {
       // Get user document reference
       const userDocRef = doc(db, "users", user.uid);
       
       // Get user profile for CV generation if exists
-      let userProfile = {};
       const userDoc = await getDoc(userDocRef);
       
+      let userProfile: Partial<Profile> = {};
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        userProfile = userData.profile || {};
+        if (userData.profile) {
+          userProfile = userData.profile;
+          console.log("User profile retrieved:", userProfile);
+        } else {
+          console.log("No user profile found, using empty profile");
+        }
+      } else {
+        console.log("User document does not exist, will create a new one");
       }
       
       // Create a new CV object with required structure
@@ -133,11 +141,11 @@ export function useResumeForm() {
         cv_data: {
           educations: [],
           lang_of_cv: "français",
-          hobbies: userProfile?.hobbies || "",
+          hobbies: userProfile.hobbies || "",
           languages: [],
-          phone: userProfile?.head?.phone || "",
-          mail: userProfile?.head?.mail || "",
-          title: userProfile?.head?.title || "",
+          phone: userProfile.head?.phone || "",
+          mail: userProfile.head?.mail || "",
+          title: userProfile.head?.title || "",
           sections_name: {
             experience_section_name: "Expérience professionnelle",
             Hobbies_section: "Centres d'intérêt",
@@ -147,9 +155,11 @@ export function useResumeForm() {
           },
           skills: [],
           experiences: [],
-          name: userProfile?.head?.name || ""
+          name: userProfile.head?.name || ""
         }
       };
+      
+      console.log("New CV object created:", newCV);
       
       // Save to Firestore
       if (userDoc.exists()) {
@@ -158,23 +168,29 @@ export function useResumeForm() {
         
         let updatedCvs;
         if (isEditing) {
+          console.log("Updating existing CV:", cvName);
           // Replace the CV with the same name
           updatedCvs = existingCvs.map((cv: CV) => 
             cv.cv_name === cvName ? newCV : cv
           );
         } else {
+          console.log("Adding new CV:", cvName);
           // Add new CV
           updatedCvs = [...existingCvs, newCV];
         }
         
+        console.log("Updating user document with new CVs array");
         // Update the document with the new CV
         await updateDoc(userDocRef, { cvs: updatedCvs });
+        console.log("Document updated successfully");
       } else {
+        console.log("Creating new user document with CV");
         // Create new user document with the CV
         await setDoc(userDocRef, {
           cvs: [newCV],
           profile: userProfile
         });
+        console.log("New document created successfully");
       }
 
       toast({
@@ -183,6 +199,7 @@ export function useResumeForm() {
       });
       
       // Navigate back to resumes list
+      console.log("Navigating back to resumes list");
       navigate("/resumes");
     } catch (error) {
       console.error("Error saving CV:", error);

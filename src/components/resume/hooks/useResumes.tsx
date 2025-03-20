@@ -39,6 +39,7 @@ export const useResumes = () => {
             console.log("CVs found:", cvs);
             setResumes(cvs);
           } else {
+            console.log("No user document found, creating empty document");
             // Create user document if it doesn't exist
             await setDoc(userDocRef, { cvs: [], profile: {} });
             setResumes([]);

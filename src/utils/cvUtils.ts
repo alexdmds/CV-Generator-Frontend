@@ -2,48 +2,69 @@
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/components/auth/firebase-config";
 import { CV, Profile } from "@/types/profile";
+import { createCVObject } from "./cvFactory";
+
+interface ToastFunction {
+  (props: { 
+    title: string; 
+    description: string; 
+    variant?: "default" | "destructive" 
+  }): void;
+}
 
 interface CreateCVOptions {
   user: { uid: string };
   cvName: string;
   jobDescription: string;
-  toast: (props: { 
-    title: string; 
-    description: string; 
-    variant?: "default" | "destructive" 
-  }) => void;
+  toast: ToastFunction;
 }
 
 /**
- * Creates a new CV object with the required structure
+ * Retrieves user profile data from Firestore
  */
-export const createCVObject = (cvName: string, jobDescription: string, userProfile: Partial<Profile> = {}): CV => {
-  console.log("Creating new CV object with name:", cvName);
+async function getUserProfile(userId: string): Promise<Partial<Profile>> {
+  const userDocRef = doc(db, "users", userId);
+  const userDoc = await getDoc(userDocRef);
   
-  return {
-    job_raw: jobDescription,
-    cv_name: cvName,
-    cv_data: {
-      educations: [],
-      lang_of_cv: "français",
-      hobbies: userProfile.hobbies || "",
-      languages: [],
-      phone: userProfile.head?.phone || "",
-      mail: userProfile.head?.mail || "",
-      title: userProfile.head?.title || "",
-      sections_name: {
-        experience_section_name: "Expérience professionnelle",
-        Hobbies_section: "Centres d'intérêt",
-        languages_section_name: "Langues",
-        skills_section_name: "Compétences",
-        education_section_name: "Formation"
-      },
-      skills: [],
-      experiences: [],
-      name: userProfile.head?.name || ""
+  if (userDoc.exists()) {
+    const userData = userDoc.data();
+    if (userData.profile) {
+      return userData.profile;
     }
-  };
-};
+  }
+  
+  return {};
+}
+
+/**
+ * Updates existing CV or adds a new one to the user's CVs array
+ */
+async function updateUserCVs(
+  userDocRef: any, 
+  existingCvs: CV[], 
+  newCV: CV
+): Promise<boolean> {
+  // Check if CV with same name already exists
+  const existingCvIndex = existingCvs.findIndex((cv: CV) => cv.cv_name === newCV.cv_name);
+  
+  let updatedCvs;
+  if (existingCvIndex >= 0) {
+    console.log("Updating existing CV with name:", newCV.cv_name);
+    // Replace the CV with the same name
+    updatedCvs = [...existingCvs];
+    updatedCvs[existingCvIndex] = newCV;
+  } else {
+    console.log("Adding new CV with name:", newCV.cv_name);
+    // Add new CV
+    updatedCvs = [...existingCvs, newCV];
+  }
+  
+  console.log("Updating user document with new CVs array:", updatedCvs);
+  // Update the document with the new CV
+  await updateDoc(userDocRef, { cvs: updatedCvs });
+  
+  return true;
+}
 
 /**
  * Saves a CV to Firestore
@@ -66,52 +87,22 @@ export const saveCVToFirestore = async ({
     const userDocRef = doc(db, "users", user.uid);
     console.log("User doc reference for CV save:", userDocRef.path);
     
-    // Get user profile for CV generation if exists
-    const userDoc = await getDoc(userDocRef);
-    
-    let userProfile: Partial<Profile> = {};
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      console.log("User document data retrieved:", userData);
-      
-      if (userData.profile) {
-        userProfile = userData.profile;
-        console.log("User profile retrieved for CV:", userProfile);
-      } else {
-        console.log("No user profile found, using empty profile");
-      }
-    } else {
-      console.log("User document does not exist, will create a new one");
-    }
+    // Get user profile for CV generation
+    const userProfile = await getUserProfile(user.uid);
+    console.log("User profile retrieved for CV:", userProfile);
     
     // Create a new CV object with required structure
     const newCV = createCVObject(cvName, jobDescription, userProfile);
     console.log("New CV object created:", newCV);
     
-    // Save to Firestore
+    // Get user document to check if it exists
+    const userDoc = await getDoc(userDocRef);
+    
     if (userDoc.exists()) {
       const userData = userDoc.data();
       const existingCvs = userData.cvs || [];
       
-      // Check if CV with same name already exists
-      const existingCvIndex = existingCvs.findIndex((cv: CV) => cv.cv_name === cvName);
-      
-      let updatedCvs;
-      if (existingCvIndex >= 0) {
-        console.log("Updating existing CV with name:", cvName);
-        // Replace the CV with the same name
-        updatedCvs = [...existingCvs];
-        updatedCvs[existingCvIndex] = newCV;
-      } else {
-        console.log("Adding new CV with name:", cvName);
-        // Add new CV
-        updatedCvs = [...existingCvs, newCV];
-      }
-      
-      console.log("Updating user document with new CVs array:", updatedCvs);
-      // Update the document with the new CV
-      await updateDoc(userDocRef, { cvs: updatedCvs });
-      console.log("Document updated successfully with new CV");
+      await updateUserCVs(userDocRef, existingCvs, newCV);
     } else {
       console.log("Creating new user document with CV");
       // Create new user document with the CV

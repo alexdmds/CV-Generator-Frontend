@@ -22,6 +22,11 @@ const ResumeForm = () => {
     navigate
   } = useResumeForm();
 
+  // Wrap the function to match expected void return type
+  const handleCreateClick = async () => {
+    await handleCreateNewCV();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -60,7 +65,7 @@ const ResumeForm = () => {
         onOpenChange={handleDialogOpenChange}
         cvName={cvName}
         setCvName={setCvName}
-        onCreateClick={handleCreateNewCV}
+        onCreateClick={handleCreateClick}
         isSubmitting={isSubmitting}
       />
     </div>

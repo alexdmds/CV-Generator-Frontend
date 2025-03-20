@@ -7,7 +7,7 @@ import { FileText, Pencil, Trash2 } from "lucide-react";
 
 interface ResumesGridProps {
   resumes: CV[];
-  onResumeClick: (resume: CV) => void;
+  onResumeClick: (resume?: CV) => void;
   onRenameClick: (resume: CV) => void;
   onDeleteClick: (resume: CV) => void;
 }

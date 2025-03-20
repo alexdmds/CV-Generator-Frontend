@@ -12,6 +12,7 @@ import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 import { RenameDialog } from "./components/RenameDialog";
 import { useResumes } from "./hooks/useResumes";
 import { CvNameDialog } from "./components/CvNameDialog";
+import { saveCVToFirestore } from "@/utils/cvUtils";
 
 export const ResumeList = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -50,8 +51,32 @@ export const ResumeList = () => {
   const handleCreateNewCV = async () => {
     setIsSubmitting(true);
     try {
-      if (newCvNameInput.trim()) {
-        navigate(`/resumes/new?name=${encodeURIComponent(newCvNameInput)}`);
+      if (!newCvNameInput.trim()) {
+        return;
+      }
+      
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour créer un CV",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+
+      // Save the CV to Firestore with an empty job description
+      const saved = await saveCVToFirestore({
+        user,
+        cvName: newCvNameInput,
+        jobDescription: "",
+        toast
+      });
+      
+      if (saved) {
+        // Navigate to the new CV edit page
+        navigate(`/resumes/${encodeURIComponent(newCvNameInput)}`);
         setCvNameDialogOpen(false);
       }
     } finally {

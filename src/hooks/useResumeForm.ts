@@ -3,8 +3,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { db, auth } from "@/components/auth/firebase-config";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
-import { CV, Profile } from "@/types/profile";
+import { doc, getDoc } from "firebase/firestore";
+import { CV } from "@/types/profile";
+import { saveCVToFirestore } from "@/utils/cvUtils";
+import { validateCV } from "@/utils/cvValidation";
 
 export function useResumeForm() {
   const { id } = useParams();
@@ -86,17 +88,27 @@ export function useResumeForm() {
   };
 
   const handleGenerateResume = async () => {
+    const validation = validateCV(cvName, jobDescription);
+    if (!validation.valid) {
+      toast({
+        title: "Erreur",
+        description: validation.message || "Veuillez vérifier les informations saisies",
+        variant: "destructive",
+      });
+      
+      if (!cvName.trim()) {
+        setCvNameDialogOpen(true);
+      }
+      
+      return;
+    }
+
     if (!jobDescription.trim()) {
       toast({
         title: "Erreur",
         description: "Veuillez copier la fiche de poste avant de générer un CV",
         variant: "destructive",
       });
-      return;
-    }
-
-    if (!cvName.trim()) {
-      setCvNameDialogOpen(true);
       return;
     }
 
@@ -112,102 +124,26 @@ export function useResumeForm() {
     }
 
     setIsSubmitting(true);
-    console.log("Saving CV to Firestore...");
+    console.log("Starting CV generation and save process...");
 
     try {
-      // Get user document reference
-      const userDocRef = doc(db, "users", user.uid);
-      console.log("User doc reference:", userDocRef.path);
-      
-      // Get user profile for CV generation if exists
-      const userDoc = await getDoc(userDocRef);
-      
-      let userProfile: Partial<Profile> = {};
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("User document data:", userData);
-        if (userData.profile) {
-          userProfile = userData.profile;
-          console.log("User profile retrieved:", userProfile);
-        } else {
-          console.log("No user profile found, using empty profile");
-        }
-      } else {
-        console.log("User document does not exist, will create a new one");
-      }
-      
-      // Create a new CV object with required structure
-      const newCV: CV = {
-        job_raw: jobDescription,
-        cv_name: cvName,
-        cv_data: {
-          educations: [],
-          lang_of_cv: "français",
-          hobbies: userProfile.hobbies || "",
-          languages: [],
-          phone: userProfile.head?.phone || "",
-          mail: userProfile.head?.mail || "",
-          title: userProfile.head?.title || "",
-          sections_name: {
-            experience_section_name: "Expérience professionnelle",
-            Hobbies_section: "Centres d'intérêt",
-            languages_section_name: "Langues",
-            skills_section_name: "Compétences",
-            education_section_name: "Formation"
-          },
-          skills: [],
-          experiences: [],
-          name: userProfile.head?.name || ""
-        }
-      };
-      
-      console.log("New CV object created:", newCV);
-      
-      // Save to Firestore
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const existingCvs = userData.cvs || [];
-        
-        let updatedCvs;
-        if (isEditing) {
-          console.log("Updating existing CV:", cvName);
-          // Replace the CV with the same name
-          updatedCvs = existingCvs.map((cv: CV) => 
-            cv.cv_name === cvName ? newCV : cv
-          );
-        } else {
-          console.log("Adding new CV:", cvName);
-          // Add new CV
-          updatedCvs = [...existingCvs, newCV];
-        }
-        
-        console.log("Updating user document with new CVs array:", updatedCvs);
-        // Update the document with the new CV
-        await updateDoc(userDocRef, { cvs: updatedCvs });
-        console.log("Document updated successfully");
-      } else {
-        console.log("Creating new user document with CV");
-        // Create new user document with the CV
-        await setDoc(userDocRef, {
-          cvs: [newCV],
-          profile: userProfile
-        });
-        console.log("New document created successfully");
-      }
-
-      toast({
-        title: "Succès !",
-        description: "Votre CV a été sauvegardé avec succès.",
+      const saved = await saveCVToFirestore({
+        user,
+        cvName,
+        jobDescription,
+        toast
       });
       
-      // Navigate back to resumes list
-      console.log("Navigating back to resumes list");
-      navigate("/resumes");
+      if (saved) {
+        // Navigate back to resumes list
+        console.log("CV saved successfully, navigating back to resumes list");
+        navigate("/resumes");
+      }
     } catch (error) {
-      console.error("Error saving CV:", error);
+      console.error("Error in handleGenerateResume:", error);
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la sauvegarde du CV",
+        description: "Une erreur est survenue lors de la génération du CV",
         variant: "destructive",
       });
     } finally {
@@ -216,103 +152,55 @@ export function useResumeForm() {
   };
   
   const handleCreateNewCV = async () => {
-    if (!cvName.trim()) {
+    const validation = validateCV(cvName);
+    if (!validation.valid) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir un nom pour votre CV",
+        description: validation.message || "Veuillez vérifier les informations saisies",
         variant: "destructive",
       });
       return;
     }
     
-    setCvNameDialogOpen(false);
+    const user = auth.currentUser;
+    if (!user) {
+      toast({
+        title: "Erreur d'authentification",
+        description: "Vous devez être connecté pour créer un CV",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
     
-    // Create an empty CV with just the name if no job description yet
-    if (!jobDescription.trim()) {
-      const user = auth.currentUser;
-      if (!user) {
-        toast({
-          title: "Erreur d'authentification",
-          description: "Vous devez être connecté pour créer un CV",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
+    setCvNameDialogOpen(false);
+    setIsSubmitting(true);
+    console.log("Creating new CV in Firestore...");
+    
+    try {
+      const saved = await saveCVToFirestore({
+        user,
+        cvName,
+        jobDescription,
+        toast
+      });
       
-      setIsSubmitting(true);
-      console.log("Creating new empty CV in Firestore...");
-      
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        console.log("User doc reference for empty CV:", userDocRef.path);
-        
-        const userDoc = await getDoc(userDocRef);
-        
-        let userProfile: Partial<Profile> = {};
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.profile) {
-            userProfile = userData.profile;
-          }
-        }
-        
-        // Create a new empty CV object
-        const newCV: CV = {
-          job_raw: "",
-          cv_name: cvName,
-          cv_data: {
-            educations: [],
-            lang_of_cv: "français",
-            hobbies: userProfile.hobbies || "",
-            languages: [],
-            phone: userProfile.head?.phone || "",
-            mail: userProfile.head?.mail || "",
-            title: userProfile.head?.title || "",
-            sections_name: {
-              experience_section_name: "Expérience professionnelle",
-              Hobbies_section: "Centres d'intérêt",
-              languages_section_name: "Langues",
-              skills_section_name: "Compétences",
-              education_section_name: "Formation"
-            },
-            skills: [],
-            experiences: [],
-            name: userProfile.head?.name || ""
-          }
-        };
-        
-        console.log("New empty CV object created:", newCV);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const existingCvs = userData.cvs || [];
-          const updatedCvs = [...existingCvs, newCV];
-          
-          console.log("Updating user document with new empty CV:", updatedCvs);
-          await updateDoc(userDocRef, { cvs: updatedCvs });
-          console.log("Document updated with empty CV");
-        } else {
-          console.log("Creating new user document with empty CV");
-          await setDoc(userDocRef, {
-            cvs: [newCV],
-            profile: userProfile
-          });
-          console.log("New document with empty CV created");
-        }
-      } catch (error) {
-        console.error("Error creating empty CV:", error);
-        toast({
-          title: "Erreur",
-          description: "Une erreur est survenue lors de la création du CV",
-          variant: "destructive",
-        });
-      } finally {
+      if (saved && !jobDescription.trim()) {
+        // If no job description yet, stay on the page to let user fill it
         setIsSubmitting(false);
+      } else if (saved) {
+        // Navigate back to resumes list if we have both name and job description
+        console.log("CV creation complete, navigating to resumes list");
+        navigate("/resumes");
       }
-    } else {
-      // If job description is already filled, save the CV immediately
-      await handleGenerateResume();
+    } catch (error) {
+      console.error("Error creating CV:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la création du CV",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
     }
   };
 

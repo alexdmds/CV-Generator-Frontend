@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface CvNameDialogProps {
   open: boolean;
@@ -44,7 +45,12 @@ export function CvNameDialog({
         </div>
         <DialogFooter>
           <Button onClick={onCreateClick} disabled={!cvName.trim() || isSubmitting}>
-            {isSubmitting ? "Création..." : "Créer"}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Création...
+              </>
+            ) : "Créer"}
           </Button>
         </DialogFooter>
       </DialogContent>

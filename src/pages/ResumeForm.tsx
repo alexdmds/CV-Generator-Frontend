@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,6 +92,11 @@ const ResumeForm = () => {
         description: "Veuillez copier la fiche de poste avant de générer un CV",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!cvName.trim()) {
+      setCvNameDialogOpen(true);
       return;
     }
 
@@ -191,7 +197,7 @@ const ResumeForm = () => {
     }
   };
   
-  const handleCreateNewCV = () => {
+  const handleCreateNewCV = async () => {
     if (!cvName.trim()) {
       toast({
         title: "Erreur",
@@ -202,6 +208,11 @@ const ResumeForm = () => {
     }
     
     setCvNameDialogOpen(false);
+    
+    // If jobDescription is already filled, generate the CV immediately
+    if (jobDescription.trim()) {
+      await handleGenerateResume();
+    }
   };
 
   return (
@@ -259,6 +270,9 @@ const ResumeForm = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nommez votre CV</DialogTitle>
+            <DialogDescription>
+              Donnez un nom à votre CV pour l'identifier facilement plus tard.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Label htmlFor="cvName">Nom du CV</Label>

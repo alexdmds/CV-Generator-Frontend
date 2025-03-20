@@ -2,17 +2,16 @@
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/components/auth/firebase-config";
 import { CV, Profile } from "@/types/profile";
-import { Toast } from "@/components/ui/toast";
 
 interface CreateCVOptions {
   user: { uid: string };
   cvName: string;
   jobDescription: string;
-  toast: {
-    title: string;
-    description: string;
-    variant?: "default" | "destructive";
-  };
+  toast: (props: { 
+    title: string; 
+    description: string; 
+    variant?: "default" | "destructive" 
+  }) => void;
 }
 
 /**

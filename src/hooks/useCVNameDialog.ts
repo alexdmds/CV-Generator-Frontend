@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,15 +7,19 @@ export function useCVNameDialog(isEditing: boolean, initialCvName: string = "") 
 
   // Handle when user tries to close the CV name dialog
   const handleDialogOpenChange = (open: boolean) => {
-    // Only allow closing the dialog if we're editing an existing CV
-    // or a name has been provided for a new CV
-    if (isEditing || (initialCvName.trim() !== "" && !open)) {
+    // If the dialog is being opened, always allow it
+    if (open) {
       setCvNameDialogOpen(open);
-    } else if (!open && window.location.pathname.includes("/new")) {
-      // If trying to close without a name during new CV creation, navigate back
-      navigate("/resumes");
+      return;
+    }
+    
+    // If we're editing an existing CV or we have a name, allow closing
+    if (isEditing || initialCvName.trim() !== "") {
+      setCvNameDialogOpen(false);
     } else {
-      setCvNameDialogOpen(open);
+      // If we're creating a new CV and don't have a name yet,
+      // keep the dialog open (don't navigate away)
+      setCvNameDialogOpen(true);
     }
   };
 

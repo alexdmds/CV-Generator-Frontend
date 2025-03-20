@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 interface CvNameDialogProps {
   open: boolean;
@@ -29,15 +29,36 @@ export function CvNameDialog({
     }
   };
 
+  const closeButtonClick = () => {
+    // Only allow closing if we have a CV name
+    if (cvName.trim()) {
+      onOpenChange(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-        <DialogHeader>
+      <DialogContent 
+        onPointerDownOutside={(e) => e.preventDefault()} 
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="sm:max-w-md"
+      >
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Nommez votre CV</DialogTitle>
-          <DialogDescription>
-            Donnez un nom à votre CV pour l'identifier facilement plus tard.
-          </DialogDescription>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 rounded-full" 
+            onClick={closeButtonClick}
+            disabled={!cvName.trim()}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fermer</span>
+          </Button>
         </DialogHeader>
+        <DialogDescription>
+          Donnez un nom à votre CV pour l'identifier facilement plus tard.
+        </DialogDescription>
         <form onSubmit={handleSubmit}>
           <div className="py-4">
             <Label htmlFor="cvName">Nom du CV <span className="text-red-500">*</span></Label>

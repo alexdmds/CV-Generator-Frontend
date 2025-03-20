@@ -1,20 +1,29 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Navbar } from "@/components/layout/Navbar";
 import { useParams, useNavigate } from "react-router-dom";
 import { FileText, ArrowLeft } from "lucide-react";
+import { useState } from "react";
 
 const ResumeForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [jobDescription, setJobDescription] = useState("");
 
   const handleGenerateResume = () => {
+    if (!jobDescription.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez copier la fiche de poste avant de générer un CV",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Génération du CV",
       description: "Votre CV est en cours de génération...",
@@ -44,22 +53,19 @@ const ResumeForm = () => {
           <CardContent>
             <form className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title">Intitulé du poste</Label>
-                <Input id="title" placeholder="ex: Développeur Frontend React" />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="company">Entreprise</Label>
-                <Input id="company" placeholder="ex: Acme Inc." />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description du poste</Label>
+                <label htmlFor="jobDescription" className="block text-sm font-medium text-gray-700">
+                  Fiche de poste
+                </label>
                 <Textarea
-                  id="description"
-                  placeholder="Décrivez le poste et ses responsabilités..."
-                  className="min-h-[150px]"
+                  id="jobDescription"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Copiez-collez ici l'intégralité de la fiche de poste..."
+                  className="min-h-[300px] w-full"
                 />
+                <p className="text-xs text-gray-500">
+                  Copiez l'intégralité de la fiche de poste pour une meilleure qualité de génération.
+                </p>
               </div>
 
               <Button

@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +42,10 @@ export function CvNameDialog({
         onEscapeKeyDown={(e) => e.preventDefault()}
         className="sm:max-w-md"
       >
+        <div className="absolute right-4 top-4 opacity-0 w-0 h-0 overflow-hidden">
+          <X className="h-0 w-0" />
+        </div>
+        
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Nommez votre CV</DialogTitle>
           <Button 

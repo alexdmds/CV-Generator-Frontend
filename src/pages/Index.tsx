@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import { ArrowDown } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -28,10 +27,9 @@ const Index = () => {
               onClick={() => navigate("/login")} 
               variant="ghost" 
               size="sm"
-              className="text-xs text-gray-500 flex items-center gap-1"
+              className="text-xs text-gray-500"
             >
-              <ArrowDown className="h-3 w-3" />
-              Options de connexion alternatives
+              Connexion par email
             </Button>
           </div>
         </CardContent>

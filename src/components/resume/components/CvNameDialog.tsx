@@ -10,7 +10,7 @@ interface CvNameDialogProps {
   onOpenChange: (open: boolean) => void;
   cvName: string;
   setCvName: (name: string) => void;
-  onCreateClick: () => void;
+  onCreateClick: () => Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -22,6 +22,13 @@ export function CvNameDialog({
   onCreateClick,
   isSubmitting = false
 }: CvNameDialogProps) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cvName.trim()) {
+      await onCreateClick();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
@@ -31,28 +38,30 @@ export function CvNameDialog({
             Donnez un nom à votre CV pour l'identifier facilement plus tard.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-          <Label htmlFor="cvName">Nom du CV <span className="text-red-500">*</span></Label>
-          <Input
-            id="cvName"
-            value={cvName}
-            onChange={(e) => setCvName(e.target.value)}
-            placeholder="Ex: Développeur React - Société X"
-            autoFocus
-            required
-          />
-          <p className="text-xs text-gray-500 mt-1">Ce champ est obligatoire</p>
-        </div>
-        <DialogFooter>
-          <Button onClick={onCreateClick} disabled={!cvName.trim() || isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Création...
-              </>
-            ) : "Créer"}
-          </Button>
-        </DialogFooter>
+        <form onSubmit={handleSubmit}>
+          <div className="py-4">
+            <Label htmlFor="cvName">Nom du CV <span className="text-red-500">*</span></Label>
+            <Input
+              id="cvName"
+              value={cvName}
+              onChange={(e) => setCvName(e.target.value)}
+              placeholder="Ex: Développeur React - Société X"
+              autoFocus
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Ce champ est obligatoire</p>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={!cvName.trim() || isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Création...
+                </>
+              ) : "Créer"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

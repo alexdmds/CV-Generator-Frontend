@@ -117,6 +117,7 @@ export function useResumeForm() {
     try {
       // Get user document reference
       const userDocRef = doc(db, "users", user.uid);
+      console.log("User doc reference:", userDocRef.path);
       
       // Get user profile for CV generation if exists
       const userDoc = await getDoc(userDocRef);
@@ -124,6 +125,7 @@ export function useResumeForm() {
       let userProfile: Partial<Profile> = {};
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        console.log("User document data:", userData);
         if (userData.profile) {
           userProfile = userData.profile;
           console.log("User profile retrieved:", userProfile);
@@ -179,7 +181,7 @@ export function useResumeForm() {
           updatedCvs = [...existingCvs, newCV];
         }
         
-        console.log("Updating user document with new CVs array");
+        console.log("Updating user document with new CVs array:", updatedCvs);
         // Update the document with the new CV
         await updateDoc(userDocRef, { cvs: updatedCvs });
         console.log("Document updated successfully");
@@ -225,8 +227,91 @@ export function useResumeForm() {
     
     setCvNameDialogOpen(false);
     
-    // If job description is already filled, save the CV immediately
-    if (jobDescription.trim()) {
+    // Create an empty CV with just the name if no job description yet
+    if (!jobDescription.trim()) {
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour créer un CV",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+      
+      setIsSubmitting(true);
+      console.log("Creating new empty CV in Firestore...");
+      
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        console.log("User doc reference for empty CV:", userDocRef.path);
+        
+        const userDoc = await getDoc(userDocRef);
+        
+        let userProfile: Partial<Profile> = {};
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.profile) {
+            userProfile = userData.profile;
+          }
+        }
+        
+        // Create a new empty CV object
+        const newCV: CV = {
+          job_raw: "",
+          cv_name: cvName,
+          cv_data: {
+            educations: [],
+            lang_of_cv: "français",
+            hobbies: userProfile.hobbies || "",
+            languages: [],
+            phone: userProfile.head?.phone || "",
+            mail: userProfile.head?.mail || "",
+            title: userProfile.head?.title || "",
+            sections_name: {
+              experience_section_name: "Expérience professionnelle",
+              Hobbies_section: "Centres d'intérêt",
+              languages_section_name: "Langues",
+              skills_section_name: "Compétences",
+              education_section_name: "Formation"
+            },
+            skills: [],
+            experiences: [],
+            name: userProfile.head?.name || ""
+          }
+        };
+        
+        console.log("New empty CV object created:", newCV);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const existingCvs = userData.cvs || [];
+          const updatedCvs = [...existingCvs, newCV];
+          
+          console.log("Updating user document with new empty CV:", updatedCvs);
+          await updateDoc(userDocRef, { cvs: updatedCvs });
+          console.log("Document updated with empty CV");
+        } else {
+          console.log("Creating new user document with empty CV");
+          await setDoc(userDocRef, {
+            cvs: [newCV],
+            profile: userProfile
+          });
+          console.log("New document with empty CV created");
+        }
+      } catch (error) {
+        console.error("Error creating empty CV:", error);
+        toast({
+          title: "Erreur",
+          description: "Une erreur est survenue lors de la création du CV",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      // If job description is already filled, save the CV immediately
       await handleGenerateResume();
     }
   };

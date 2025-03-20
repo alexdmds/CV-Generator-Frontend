@@ -29,12 +29,15 @@ export const useResumes = () => {
 
         console.log("Loading CVs for user:", user.uid);
         const userDocRef = doc(db, "users", user.uid);
+        console.log("User document reference:", userDocRef.path);
         
         try {
           const userDoc = await getDoc(userDocRef);
+          console.log("User document exists:", userDoc.exists());
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            console.log("User document data:", userData);
             const cvs = userData.cvs || [];
             console.log("CVs found:", cvs);
             setResumes(cvs);
@@ -98,6 +101,7 @@ export const useResumes = () => {
         
         // Filter out the CV to delete
         const updatedCvs = cvs.filter((cv: CV) => cv.cv_name !== cvName);
+        console.log("Deleting CV. Updated CVs:", updatedCvs);
         
         // Update the user document with the updated CVs array
         await updateDoc(userDocRef, { cvs: updatedCvs });
@@ -146,6 +150,8 @@ export const useResumes = () => {
           }
           return cv;
         });
+        
+        console.log("Renaming CV. Updated CVs:", updatedCvs);
         
         // Update the user document with the updated CVs array
         await updateDoc(userDocRef, { cvs: updatedCvs });

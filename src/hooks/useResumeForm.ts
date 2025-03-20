@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCVData } from "./useCVData";
 import { useCVNameDialog } from "./useCVNameDialog";
 import { useCVSubmission } from "./useCVSubmission";
@@ -16,6 +16,7 @@ export function useResumeForm() {
   } = useCVData();
   
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const {
     cvNameDialogOpen,
@@ -29,12 +30,20 @@ export function useResumeForm() {
     handleCreateNewCV: createNewCV
   } = useCVSubmission();
   
-  // Show the name dialog if we're creating a new CV
+  // Get initial CV name from URL if present
   useEffect(() => {
-    if (id === "new") {
-      setCvNameDialogOpen(true);
+    const nameFromUrl = searchParams.get('name');
+    if (nameFromUrl) {
+      setCvName(decodeURIComponent(nameFromUrl));
     }
-  }, [id, setCvNameDialogOpen]);
+  }, [searchParams, setCvName]);
+  
+  // Show the name dialog if we're creating a new CV and don't have a name
+  useEffect(() => {
+    if (id === "new" && !cvName) {
+      navigate('/resumes');
+    }
+  }, [id, cvName, navigate]);
   
   // Wrapper functions to pass the current state values
   const handleGenerateResume = async () => {

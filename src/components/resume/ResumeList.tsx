@@ -11,6 +11,7 @@ import { ResumesGrid } from "./components/ResumesGrid";
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 import { RenameDialog } from "./components/RenameDialog";
 import { useResumes } from "./hooks/useResumes";
+import { CvNameDialog } from "./components/CvNameDialog";
 
 export const ResumeList = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -18,6 +19,8 @@ export const ResumeList = () => {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [cvToRename, setCvToRename] = useState<string | null>(null);
   const [newCvName, setNewCvName] = useState("");
+  const [cvNameDialogOpen, setCvNameDialogOpen] = useState(false);
+  const [newCvNameInput, setNewCvNameInput] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
   const { resumes, deleteResume, renameResume } = useResumes();
@@ -37,7 +40,15 @@ export const ResumeList = () => {
     if (resume) {
       navigate(`/resumes/${resume.cv_name}`);
     } else {
-      navigate(`/resumes/new`);
+      // Open the dialog instead of navigating directly
+      setNewCvNameInput("");
+      setCvNameDialogOpen(true);
+    }
+  };
+
+  const handleCreateNewCV = async () => {
+    if (newCvNameInput.trim()) {
+      navigate(`/resumes/new?name=${encodeURIComponent(newCvNameInput)}`);
     }
   };
 
@@ -100,6 +111,14 @@ export const ResumeList = () => {
         newName={newCvName}
         onNewNameChange={setNewCvName}
         onConfirm={handleRenameCV}
+      />
+
+      <CvNameDialog 
+        open={cvNameDialogOpen}
+        onOpenChange={setCvNameDialogOpen}
+        cvName={newCvNameInput}
+        setCvName={setNewCvNameInput}
+        onCreateClick={handleCreateNewCV}
       />
     </>
   );

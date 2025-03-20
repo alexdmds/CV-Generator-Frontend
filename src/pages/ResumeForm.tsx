@@ -12,10 +12,11 @@ const ResumeForm = () => {
     jobDescription,
     setJobDescription,
     cvNameDialogOpen,
-    setCvNameDialogOpen,
+    handleDialogOpenChange,
     cvName,
     setCvName,
     isEditing,
+    isSubmitting,
     handleGenerateResume,
     handleCreateNewCV,
     navigate
@@ -29,6 +30,7 @@ const ResumeForm = () => {
           variant="ghost"
           onClick={() => navigate("/resumes")}
           className="mb-6 flex items-center gap-2"
+          disabled={isSubmitting}
         >
           <ArrowLeft className="w-4 h-4" />
           Retour aux CVs
@@ -47,6 +49,7 @@ const ResumeForm = () => {
               onGenerateClick={handleGenerateResume}
               isEditing={isEditing}
               cvName={cvName}
+              isSubmitting={isSubmitting}
             />
           </CardContent>
         </Card>
@@ -54,13 +57,14 @@ const ResumeForm = () => {
       
       <CvNameDialog
         open={cvNameDialogOpen}
-        onOpenChange={setCvNameDialogOpen}
+        onOpenChange={handleDialogOpenChange}
         cvName={cvName}
         setCvName={setCvName}
         onCreateClick={handleCreateNewCV}
+        isSubmitting={isSubmitting}
       />
     </div>
   );
-};
+}
 
 export default ResumeForm;

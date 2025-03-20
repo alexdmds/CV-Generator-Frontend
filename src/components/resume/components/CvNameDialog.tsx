@@ -10,6 +10,7 @@ interface CvNameDialogProps {
   cvName: string;
   setCvName: (name: string) => void;
   onCreateClick: () => void;
+  isSubmitting?: boolean;
 }
 
 export function CvNameDialog({ 
@@ -17,11 +18,12 @@ export function CvNameDialog({
   onOpenChange, 
   cvName, 
   setCvName, 
-  onCreateClick 
+  onCreateClick,
+  isSubmitting = false
 }: CvNameDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Nommez votre CV</DialogTitle>
           <DialogDescription>
@@ -29,18 +31,20 @@ export function CvNameDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <Label htmlFor="cvName">Nom du CV</Label>
+          <Label htmlFor="cvName">Nom du CV <span className="text-red-500">*</span></Label>
           <Input
             id="cvName"
             value={cvName}
             onChange={(e) => setCvName(e.target.value)}
             placeholder="Ex: Développeur React - Société X"
             autoFocus
+            required
           />
+          <p className="text-xs text-gray-500 mt-1">Ce champ est obligatoire</p>
         </div>
         <DialogFooter>
-          <Button onClick={onCreateClick}>
-            Créer
+          <Button onClick={onCreateClick} disabled={!cvName.trim() || isSubmitting}>
+            {isSubmitting ? "Création..." : "Créer"}
           </Button>
         </DialogFooter>
       </DialogContent>

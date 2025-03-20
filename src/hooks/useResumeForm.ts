@@ -14,6 +14,7 @@ export function useResumeForm() {
   const [cvNameDialogOpen, setCvNameDialogOpen] = useState(false);
   const [cvName, setCvName] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
     // Check if we're editing an existing CV
@@ -70,6 +71,20 @@ export function useResumeForm() {
     loadCvData();
   }, [id, navigate, toast]);
 
+  // Handle when user tries to close the CV name dialog
+  const handleDialogOpenChange = (open: boolean) => {
+    // Only allow closing the dialog if we're editing an existing CV
+    // or a name has been provided for a new CV
+    if (isEditing || (cvName.trim() !== "" && !open)) {
+      setCvNameDialogOpen(open);
+    } else if (!open && id === "new") {
+      // If trying to close without a name during new CV creation, navigate back
+      navigate("/resumes");
+    } else {
+      setCvNameDialogOpen(open);
+    }
+  };
+
   const handleGenerateResume = async () => {
     if (!jobDescription.trim()) {
       toast({
@@ -95,6 +110,8 @@ export function useResumeForm() {
       navigate("/login");
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       toast({
@@ -176,6 +193,8 @@ export function useResumeForm() {
         description: "Une erreur est survenue lors de la génération du CV",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -202,9 +221,11 @@ export function useResumeForm() {
     setJobDescription,
     cvNameDialogOpen,
     setCvNameDialogOpen,
+    handleDialogOpenChange,
     cvName,
     setCvName,
     isEditing,
+    isSubmitting,
     handleGenerateResume,
     handleCreateNewCV,
     navigate

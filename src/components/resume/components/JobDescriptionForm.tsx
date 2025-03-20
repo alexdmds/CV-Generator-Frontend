@@ -1,7 +1,7 @@
 
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 
 interface JobDescriptionFormProps {
   jobDescription: string;
@@ -9,6 +9,7 @@ interface JobDescriptionFormProps {
   onGenerateClick: () => void;
   isEditing: boolean;
   cvName: string;
+  isSubmitting?: boolean;
 }
 
 export function JobDescriptionForm({ 
@@ -16,10 +17,11 @@ export function JobDescriptionForm({
   setJobDescription, 
   onGenerateClick,
   isEditing,
-  cvName
+  cvName,
+  isSubmitting = false
 }: JobDescriptionFormProps) {
   return (
-    <form className="space-y-6">
+    <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
       <div className="space-y-2">
         <label htmlFor="jobDescription" className="block text-sm font-medium text-gray-700">
           Fiche de poste
@@ -30,6 +32,7 @@ export function JobDescriptionForm({
           onChange={(e) => setJobDescription(e.target.value)}
           placeholder="Copiez-collez ici l'intégralité de la fiche de poste..."
           className="min-h-[300px] w-full"
+          disabled={isSubmitting}
         />
         <p className="text-xs text-gray-500">
           Copiez l'intégralité de la fiche de poste pour une meilleure qualité de génération.
@@ -40,9 +43,19 @@ export function JobDescriptionForm({
         type="button"
         onClick={onGenerateClick}
         className="w-full"
+        disabled={!jobDescription.trim() || isSubmitting}
       >
-        <FileText className="w-4 h-4 mr-2" />
-        Générer le CV
+        {isSubmitting ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Génération en cours...
+          </>
+        ) : (
+          <>
+            <FileText className="w-4 h-4 mr-2" />
+            Générer le CV
+          </>
+        )}
       </Button>
     </form>
   );

@@ -10,7 +10,7 @@ export const TokenCounter = ({ onRefreshRequest }: { onRefreshRequest?: (refresh
   const [tokens, setTokens] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const MAX_TOKENS = 1000000; // 1 million de tokens
+  const MAX_TOKENS = 1000000; // 1 million de tokens (information interne)
 
   const fetchTokens = useCallback(async () => {
     const auth = getAuth();
@@ -27,8 +27,7 @@ export const TokenCounter = ({ onRefreshRequest }: { onRefreshRequest?: (refresh
       const db = getFirestore();
       const userId = user.uid;
       
-      console.log("Tentative de récupération des tokens depuis Firestore...");
-      console.log("User ID:", userId);
+      console.log("Tentative de récupération des données d'utilisation...");
       
       // Adaptation à la nouvelle structure de données
       const usageRef = doc(db, "usage", userId);
@@ -51,8 +50,8 @@ export const TokenCounter = ({ onRefreshRequest }: { onRefreshRequest?: (refresh
       
       setError(null);
     } catch (err) {
-      console.error("Erreur détaillée lors de la récupération des tokens:", err);
-      setError("Erreur lors de la récupération des tokens");
+      console.error("Erreur lors de la récupération des données d'utilisation:", err);
+      setError("Erreur lors de la récupération des données d'utilisation");
       setTokens(0); // En cas d'erreur, on affiche 0
     } finally {
       setLoading(false);
@@ -84,7 +83,7 @@ export const TokenCounter = ({ onRefreshRequest }: { onRefreshRequest?: (refresh
     };
   }, [fetchTokens]);
 
-  // Permettre au parent de déclencher une actualisation des tokens
+  // Permettre au parent de déclencher une actualisation des données
   useEffect(() => {
     if (onRefreshRequest) {
       onRefreshRequest(fetchTokens);
@@ -121,16 +120,13 @@ export const TokenCounter = ({ onRefreshRequest }: { onRefreshRequest?: (refresh
         <div className="space-y-2">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium">
-              Tokens utilisés: {tokens.toLocaleString()}
+              Utilisation de votre quota
             </span>
-            <span className="text-sm text-gray-500">
-              Maximum: {MAX_TOKENS.toLocaleString()}
+            <span className="text-sm font-medium">
+              {percentage.toFixed(1)}%
             </span>
           </div>
           <Progress value={percentage} className="h-2" />
-          <div className="text-xs text-gray-500 text-right">
-            {percentage.toFixed(1)}% utilisé
-          </div>
         </div>
       </CardContent>
     </Card>

@@ -13,7 +13,7 @@ const Profile = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const refreshTokensRef = useRef<() => void>(() => {});
 
-  // Fonction pour actualiser le compteur de tokens
+  // Fonction pour actualiser le compteur d'utilisation
   const setRefreshTokensFunction = useCallback((fn: () => void) => {
     refreshTokensRef.current = fn;
   }, []);

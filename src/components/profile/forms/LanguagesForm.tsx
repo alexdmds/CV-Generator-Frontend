@@ -1,19 +1,20 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
-interface SkillsFormProps {
+interface LanguagesFormProps {
   initialData: string;
   onSave: (data: string) => void;
   lastSavedTime: number;
 }
 
-export const SkillsForm = ({ 
+export const LanguagesForm = ({ 
   initialData, 
   onSave,
   lastSavedTime 
-}: SkillsFormProps) => {
+}: LanguagesFormProps) => {
   const form = useForm({
     defaultValues: { description: initialData },
   });
@@ -31,7 +32,7 @@ export const SkillsForm = ({
 
   useEffect(() => {
     if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
-      console.log("Sauvegarde détectée, affichage de l'animation pour les compétences");
+      console.log("Sauvegarde détectée, affichage de l'animation pour les langues");
       const fields = Object.keys(form.getValues());
       const newSavedFields: Record<string, boolean> = {};
       fields.forEach(field => {
@@ -67,10 +68,10 @@ export const SkillsForm = ({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Compétences techniques et professionnelles</FormLabel>
+              <FormLabel>Langues parlées</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Listez vos compétences techniques, outils maîtrisés et savoir-faire professionnels (hors langues étrangères)"
+                  placeholder="Listez les langues que vous parlez avec votre niveau et vos certifications (ex: Anglais - C1, TOEIC 950)"
                   rows={8}
                   {...field} 
                   className={savedFields.description ? savedAnimation : savedFieldStyle}

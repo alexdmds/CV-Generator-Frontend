@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Profile } from "@/types/profile";
 import { getAuth } from "firebase/auth";
-import { Save, User, Briefcase, GraduationCap, Brain, Heart } from "lucide-react";
+import { Save, User, Briefcase, GraduationCap, Brain, Heart, Globe } from "lucide-react";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import {
   HeadForm,
   ExperiencesForm,
   EducationForm,
   SkillsForm,
-  HobbiesForm
+  HobbiesForm,
+  LanguagesForm
 } from "./forms";
 
 const emptyProfile: Profile = {
@@ -244,7 +244,7 @@ export const ProfileView = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="head" className="w-full">
-          <TabsList className="grid grid-cols-5 mb-6">
+          <TabsList className="grid grid-cols-6 mb-6">
             <TabsTrigger value="head" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Informations</span>
@@ -260,6 +260,10 @@ export const ProfileView = () => {
             <TabsTrigger value="skills" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
               <span className="hidden sm:inline">Compétences</span>
+            </TabsTrigger>
+            <TabsTrigger value="languages" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              <span className="hidden sm:inline">Langues</span>
             </TabsTrigger>
             <TabsTrigger value="hobbies" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
@@ -314,6 +318,18 @@ export const ProfileView = () => {
               initialData={profile.skills} 
               onSave={(skills) => {
                 const updatedProfile = { ...profile, skills };
+                setProfile(updatedProfile);
+                checkForChanges(updatedProfile);
+              }}
+              lastSavedTime={lastSavedTime}
+            />
+          </TabsContent>
+
+          <TabsContent value="languages">
+            <LanguagesForm 
+              initialData={profile.languages} 
+              onSave={(languages) => {
+                const updatedProfile = { ...profile, languages };
                 setProfile(updatedProfile);
                 checkForChanges(updatedProfile);
               }}

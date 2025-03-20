@@ -21,6 +21,7 @@ export const ResumeList = () => {
   const [newCvName, setNewCvName] = useState("");
   const [cvNameDialogOpen, setCvNameDialogOpen] = useState(false);
   const [newCvNameInput, setNewCvNameInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { resumes, deleteResume, renameResume } = useResumes();
@@ -47,8 +48,14 @@ export const ResumeList = () => {
   };
 
   const handleCreateNewCV = async () => {
-    if (newCvNameInput.trim()) {
-      navigate(`/resumes/new?name=${encodeURIComponent(newCvNameInput)}`);
+    setIsSubmitting(true);
+    try {
+      if (newCvNameInput.trim()) {
+        navigate(`/resumes/new?name=${encodeURIComponent(newCvNameInput)}`);
+        setCvNameDialogOpen(false);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -119,6 +126,7 @@ export const ResumeList = () => {
         cvName={newCvNameInput}
         setCvName={setNewCvNameInput}
         onCreateClick={handleCreateNewCV}
+        isSubmitting={isSubmitting}
       />
     </>
   );

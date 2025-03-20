@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PencilIcon } from "lucide-react";
 import { useResumeForm } from "@/hooks/useResumeForm";
 import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
@@ -27,6 +27,11 @@ const ResumeForm = () => {
     await handleCreateNewCV();
   };
 
+  // Handler to open the rename dialog
+  const handleRenameClick = () => {
+    handleDialogOpenChange(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -41,10 +46,23 @@ const ResumeForm = () => {
           Retour aux CVs
         </Button>
         
+        <div className="mb-4 flex items-center justify-center">
+          <h2 className="text-2xl font-bold text-center">{cvName}</h2>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 ml-2" 
+            onClick={handleRenameClick}
+          >
+            <PencilIcon className="h-4 w-4" />
+            <span className="sr-only">Modifier le nom</span>
+          </Button>
+        </div>
+        
         <Card className="w-full max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle>
-              {isEditing ? `Modifier le CV: ${cvName}` : "Nouveau CV"}
+              {isEditing ? "Modifier le CV" : "Nouveau CV"}
             </CardTitle>
           </CardHeader>
           <CardContent>

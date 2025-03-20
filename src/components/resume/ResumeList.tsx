@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { FileText, PlusCircle, Trash2, Pencil } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { getStorage, ref, listAll, uploadString, deleteObject, getDownloadURL } from "firebase/storage";
+import { db, auth } from "@/components/auth/firebase-config";
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { CV } from "@/types/profile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const ResumeList = () => {
-  const [resumes, setResumes] = useState<string[]>([]);
+  const [resumes, setResumes] = useState<CV[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [cvToDelete, setCvToDelete] = useState<string | null>(null);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -36,10 +38,9 @@ export const ResumeList = () => {
   const [newCvName, setNewCvName] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
-  const storage = getStorage(undefined, 'gs://cv-generator-447314.firebasestorage.app');
   const auth = getAuth();
 
-  const handleResumeClick = async (resumeId?: string) => {
+  const handleResumeClick = (resume?: CV) => {
     const user = auth.currentUser;
     if (!user) {
       toast({
@@ -51,28 +52,10 @@ export const ResumeList = () => {
       return;
     }
 
-    if (resumeId) {
-      navigate(`/resumes/${resumeId}`);
+    if (resume) {
+      navigate(`/resumes/${resume.cv_name}`);
     } else {
-      const newCvName = `CV_${Date.now()}`;
-      try {
-        const placeholderPath = `${user.uid}/cvs/${newCvName}/placeholder.txt`;
-        const placeholderRef = ref(storage, placeholderPath);
-        await uploadString(placeholderRef, "placeholder content");
-        
-        toast({
-          title: "Création d'un nouveau CV",
-          description: "Votre nouveau CV a été créé",
-        });
-        navigate(`/resumes/${newCvName}`);
-      } catch (error) {
-        console.error("Error creating new CV:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de créer un nouveau CV",
-          variant: "destructive",
-        });
-      }
+      navigate(`/resumes/new`);
     }
   };
 
@@ -90,17 +73,25 @@ export const ResumeList = () => {
     }
 
     try {
-      const cvFolderRef = ref(storage, `${user.uid}/cvs/${cvToDelete}`);
-      const files = await listAll(cvFolderRef);
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
       
-      // Supprimer tous les fichiers dans le dossier
-      await Promise.all(files.items.map(fileRef => deleteObject(fileRef)));
-      
-      setResumes(prev => prev.filter(cv => cv !== cvToDelete));
-      toast({
-        title: "CV supprimé",
-        description: "Le CV a été supprimé avec succès",
-      });
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const cvs = userData.cvs || [];
+        
+        // Filter out the CV to delete
+        const updatedCvs = cvs.filter((cv: CV) => cv.cv_name !== cvToDelete);
+        
+        // Update the user document with the updated CVs array
+        await updateDoc(userDocRef, { cvs: updatedCvs });
+        
+        setResumes(updatedCvs);
+        toast({
+          title: "CV supprimé",
+          description: "Le CV a été supprimé avec succès",
+        });
+      }
     } catch (error) {
       console.error("Error deleting CV:", error);
       toast({
@@ -128,25 +119,30 @@ export const ResumeList = () => {
     }
 
     try {
-      const oldPath = `${user.uid}/cvs/${cvToRename}`;
-      const newPath = `${user.uid}/cvs/${newCvName}`;
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
       
-      // Pour Firebase Storage, nous devons copier puis supprimer
-      const files = await listAll(ref(storage, oldPath));
-      
-      // Copier tous les fichiers vers le nouveau dossier
-      await Promise.all(files.items.map(async (fileRef) => {
-        const newFileRef = ref(storage, `${newPath}/${fileRef.name}`);
-        const url = await getDownloadURL(fileRef);
-        await uploadString(newFileRef, url);
-        await deleteObject(fileRef);
-      }));
-      
-      setResumes(prev => prev.map(cv => cv === cvToRename ? newCvName : cv));
-      toast({
-        title: "CV renommé",
-        description: "Le CV a été renommé avec succès",
-      });
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const cvs = userData.cvs || [];
+        
+        // Update the CV name
+        const updatedCvs = cvs.map((cv: CV) => {
+          if (cv.cv_name === cvToRename) {
+            return { ...cv, cv_name: newCvName };
+          }
+          return cv;
+        });
+        
+        // Update the user document with the updated CVs array
+        await updateDoc(userDocRef, { cvs: updatedCvs });
+        
+        setResumes(updatedCvs);
+        toast({
+          title: "CV renommé",
+          description: "Le CV a été renommé avec succès",
+        });
+      }
     } catch (error) {
       console.error("Error renaming CV:", error);
       toast({
@@ -175,28 +171,28 @@ export const ResumeList = () => {
         }
 
         console.log("Loading CVs for user:", user.uid);
-        const cvFolderRef = ref(storage, `${user.uid}/cvs`);
+        const userDocRef = doc(db, "users", user.uid);
         
         try {
-          const result = await listAll(cvFolderRef);
-          console.log("List result:", result);
+          const userDoc = await getDoc(userDocRef);
           
-          const resumeNames = result.prefixes.map(prefix => prefix.name);
-          console.log("CV folders found:", resumeNames);
-          
-          if (resumeNames.length === 0) {
-            const placeholderPath = `${user.uid}/cvs/placeholder.txt`;
-            const placeholderRef = ref(storage, placeholderPath);
-            await uploadString(placeholderRef, "placeholder content");
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const cvs = userData.cvs || [];
+            console.log("CVs found:", cvs);
+            setResumes(cvs);
+          } else {
+            // Create user document if it doesn't exist
+            await setDoc(userDocRef, { cvs: [], profile: {} });
+            setResumes([]);
           }
-          
-          setResumes(resumeNames);
-        } catch (listError) {
-          console.error("Error listing CVs:", listError);
-          const placeholderPath = `${user.uid}/cvs/placeholder.txt`;
-          const placeholderRef = ref(storage, placeholderPath);
-          await uploadString(placeholderRef, "placeholder content");
-          setResumes([]);
+        } catch (error) {
+          console.error("Error loading CVs:", error);
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger vos CVs",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error("Error in loadResumes:", error);
@@ -218,7 +214,7 @@ export const ResumeList = () => {
     });
 
     return () => unsubscribe();
-  }, [toast, storage, auth, navigate]);
+  }, [toast, auth, navigate]);
 
   return (
     <>
@@ -246,7 +242,7 @@ export const ResumeList = () => {
             <div className="grid gap-4 md:grid-cols-2">
               {resumes.map((resume) => (
                 <Card 
-                  key={resume}
+                  key={resume.cv_name}
                   className="relative cursor-pointer hover:bg-gray-50 group"
                 >
                   <CardContent 
@@ -255,7 +251,7 @@ export const ResumeList = () => {
                   >
                     <FileText className="w-8 h-8 text-gray-500" />
                     <div className="flex-grow">
-                      <h3 className="font-medium">{resume}</h3>
+                      <h3 className="font-medium">{resume.cv_name}</h3>
                     </div>
                     <div className="absolute right-2 top-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
@@ -263,8 +259,8 @@ export const ResumeList = () => {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCvToRename(resume);
-                          setNewCvName(resume);
+                          setCvToRename(resume.cv_name);
+                          setNewCvName(resume.cv_name);
                           setRenameDialogOpen(true);
                         }}
                         className="h-8 w-8"
@@ -276,7 +272,7 @@ export const ResumeList = () => {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCvToDelete(resume);
+                          setCvToDelete(resume.cv_name);
                           setDeleteConfirmOpen(true);
                         }}
                         className="h-8 w-8 text-red-500 hover:text-red-600"

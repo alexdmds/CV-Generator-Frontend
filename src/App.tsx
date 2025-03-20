@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { useEffect, useState } from "react";
 import Login from "./pages/Login";
+import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import Resumes from "./pages/Resumes";
 import ResumeForm from "./pages/ResumeForm";
@@ -58,7 +59,8 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={!user ? <Login /> : (emailVerified ? <Navigate to="/profile" /> : <Login />)} />
+            <Route path="/" element={!user ? <Index /> : (emailVerified ? <Navigate to="/profile" /> : <Index />)} />
+            <Route path="/login" element={!user ? <Login /> : (emailVerified ? <Navigate to="/profile" /> : <Login />)} />
             <Route path="/profile" element={user && emailVerified ? <Profile /> : <Navigate to="/" />} />
             <Route path="/resumes" element={user && emailVerified ? <Resumes /> : <Navigate to="/" />} />
             <Route path="/resumes/:id" element={user && emailVerified ? <ResumeForm /> : <Navigate to="/" />} />

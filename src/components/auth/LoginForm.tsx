@@ -18,7 +18,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GoogleAuthButton } from "./GoogleAuthButton";
-import { ArrowLeft } from "lucide-react";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2ZmZ8y399YYyvUHWaKOux3tgAV4T6OLg",
@@ -128,17 +127,9 @@ export const LoginForm = () => {
 
   return (
     <Card className="w-full max-w-md mx-auto animate-fadeIn">
-      <CardHeader className="relative">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="absolute left-4 top-4" 
-          onClick={() => navigate("/")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+      <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">
-          Options de connexion avancées
+          {isSignup ? "Créer un compte" : "Connexion"}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -165,9 +156,6 @@ export const LoginForm = () => {
             
             <TabsContent value="google">
               <div className="space-y-4">
-                <p className="text-sm text-gray-500 text-center mb-4">
-                  La connexion avec Google est la méthode recommandée pour accéder rapidement à votre compte.
-                </p>
                 <GoogleAuthButton className="w-full" />
               </div>
             </TabsContent>

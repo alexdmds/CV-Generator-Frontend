@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,21 +17,15 @@ const emptyProfile: Profile = {
   head: {
     name: "",
     phone: "",
-    email: "",
-    general_title: "",
+    mail: "",
+    title: "",
+    linkedin_url: ""
   },
-  experiences: {
-    experiences: []
-  },
-  education: {
-    educations: []
-  },
-  skills: {
-    description: ""
-  },
-  hobbies: {
-    description: ""
-  }
+  experiences: [],
+  educations: [],
+  skills: "",
+  hobbies: "",
+  languages: ""
 };
 
 export const ProfileView = () => {
@@ -57,7 +50,6 @@ export const ProfileView = () => {
 
         console.log("Tentative de récupération du profil pour l'utilisateur:", user.uid);
 
-        // Tenter de récupérer le profil depuis Firestore
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
         
@@ -66,21 +58,18 @@ export const ProfileView = () => {
         if (userDoc.exists()) {
           console.log("Contenu du document Firestore:", userDoc.data());
           
-          // Vérifie si le document contient la clé "cv_data"
-          if (userDoc.data().cv_data) {
-            // Profil trouvé dans Firestore sous la clé "cv_data"
-            console.log("Profil récupéré depuis Firestore (cv_data):", userDoc.data().cv_data);
-            const loadedProfile = userDoc.data().cv_data as Profile;
+          if (userDoc.data().profile) {
+            console.log("Profil récupéré depuis Firestore (profile):", userDoc.data().profile);
+            const loadedProfile = userDoc.data().profile as Profile;
             setProfile(loadedProfile);
             originalProfileRef.current = JSON.parse(JSON.stringify(loadedProfile)); // Copie profonde pour la comparaison
             setIsLoading(false);
             return;
           } else {
-            console.log("Le document existe mais ne contient pas la clé 'cv_data'");
+            console.log("Le document existe mais ne contient pas la clé 'profile'");
           }
         }
 
-        // Si non trouvé dans Firestore, essayer l'API
         console.log("Tentative de récupération du profil depuis l'API");
         const token = await user.getIdToken();
         const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/get-profile`, {
@@ -109,11 +98,9 @@ export const ProfileView = () => {
         setProfile(data);
         originalProfileRef.current = JSON.parse(JSON.stringify(data));
         
-        // Sauvegarder le profil dans Firestore pour un accès futur
         try {
-          // Sauvegarde le profil sous la clé "cv_data"
-          await setDoc(userDocRef, { cv_data: data }, { merge: true });
-          console.log("Profil sauvegardé dans Firestore sous cv_data");
+          await setDoc(userDocRef, { profile: data }, { merge: true });
+          console.log("Profil sauvegardé dans Firestore sous profile");
         } catch (firestoreError) {
           console.error("Erreur lors de la sauvegarde dans Firestore:", firestoreError);
         }
@@ -124,7 +111,6 @@ export const ProfileView = () => {
           title: "Erreur de chargement",
           description: "Impossible de charger le profil. Veuillez réessayer.",
         });
-        // En cas d'erreur, on essaie quand même d'afficher un profil vide
         setProfile(emptyProfile);
         originalProfileRef.current = JSON.parse(JSON.stringify(emptyProfile));
       } finally {
@@ -135,11 +121,9 @@ export const ProfileView = () => {
     fetchProfile();
   }, [auth, toast, db]);
 
-  // Fonction pour vérifier si le profil a changé
   const checkForChanges = useCallback((updatedProfile: Profile) => {
     if (!originalProfileRef.current) return false;
     
-    // Comparaison stricte pour détecter les changements
     const hasChanged = JSON.stringify(updatedProfile) !== JSON.stringify(originalProfileRef.current);
     setHasChanges(hasChanged);
     return hasChanged;
@@ -155,19 +139,15 @@ export const ProfileView = () => {
         throw new Error("Utilisateur non connecté");
       }
 
-      // Sauvegarder dans Firestore
       try {
         const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, { cv_data: profile }, { merge: true });
-        console.log("Profil mis à jour dans Firestore sous cv_data");
+        await setDoc(userDocRef, { profile: profile }, { merge: true });
+        console.log("Profil mis à jour dans Firestore sous profile");
         
-        // Mettre à jour la référence du profil original après sauvegarde
         originalProfileRef.current = JSON.parse(JSON.stringify(profile));
         
-        // Marquer l'absence de changements
         setHasChanges(false);
         
-        // Marquer l'heure de la dernière sauvegarde
         setLastSavedTime(Date.now());
         
         toast({
@@ -185,7 +165,6 @@ export const ProfileView = () => {
         return;
       }
 
-      // Essayer de sauvegarder dans l'API
       try {
         const token = await user.getIdToken();
         const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/update-profile`, {
@@ -205,8 +184,6 @@ export const ProfileView = () => {
         console.log("Profil mis à jour avec succès sur l'API");
       } catch (apiError) {
         console.error("Erreur lors de la sauvegarde sur l'API:", apiError);
-        // Ne pas faire échouer la sauvegarde juste parce que l'API a échoué
-        // Les données sont déjà dans Firestore
       }
     } catch (error) {
       console.error("Erreur lors de l'enregistrement du profil:", error);
@@ -287,7 +264,6 @@ export const ProfileView = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Informations Générales */}
           <TabsContent value="head">
             <HeadForm 
               initialData={profile.head} 
@@ -300,14 +276,13 @@ export const ProfileView = () => {
             />
           </TabsContent>
 
-          {/* Expériences */}
           <TabsContent value="experiences">
             <ExperiencesForm 
-              initialData={profile.experiences.experiences} 
+              initialData={profile.experiences} 
               onSave={(experiences) => {
                 const updatedProfile = { 
                   ...profile, 
-                  experiences: { experiences } 
+                  experiences 
                 };
                 setProfile(updatedProfile);
                 checkForChanges(updatedProfile);
@@ -316,14 +291,13 @@ export const ProfileView = () => {
             />
           </TabsContent>
 
-          {/* Formation */}
           <TabsContent value="education">
             <EducationForm 
-              initialData={profile.education.educations} 
+              initialData={profile.educations} 
               onSave={(educations) => {
                 const updatedProfile = { 
                   ...profile, 
-                  education: { educations } 
+                  educations
                 };
                 setProfile(updatedProfile);
                 checkForChanges(updatedProfile);
@@ -332,7 +306,6 @@ export const ProfileView = () => {
             />
           </TabsContent>
 
-          {/* Compétences */}
           <TabsContent value="skills">
             <SkillsForm 
               initialData={profile.skills} 
@@ -345,7 +318,6 @@ export const ProfileView = () => {
             />
           </TabsContent>
 
-          {/* Loisirs */}
           <TabsContent value="hobbies">
             <HobbiesForm 
               initialData={profile.hobbies} 
@@ -363,22 +335,18 @@ export const ProfileView = () => {
   );
 };
 
-// Définition d'un effet de sauvegarde personnalisé CSS
-// Effet visuel lorsque la sauvegarde est complète
 const savedFieldStyle = `
   transition-all duration-500 
   animate-none
   focus:ring-2 focus:ring-offset-2 focus:ring-purple-500
 `;
 
-// Effet d'animation pour montrer que le champ a été sauvegardé
 const savedAnimation = `
   border-green-400
   ring-1 ring-green-400/30
   transition-all duration-500
 `;
 
-// Formulaire pour les informations générales
 const HeadForm = ({ 
   initialData, 
   onSave,
@@ -394,24 +362,18 @@ const HeadForm = ({
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Observer pour détecter les changements de champ
   useEffect(() => {
     const subscription = form.watch((value) => {
-      // Marquer l'heure du dernier changement
       lastChangedTimeRef.current = Date.now();
-      // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
       onSave(value as Profile['head']);
     });
     return () => subscription.unsubscribe();
   }, [form, onSave]);
 
-  // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    // Seulement si une sauvegarde a eu lieu et après un changement
     if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
       console.log("Sauvegarde détectée, affichage de l'animation");
-      // Marquer tous les champs comme sauvegardés
       const fields = Object.keys(form.getValues());
       const newSavedFields: Record<string, boolean> = {};
       fields.forEach(field => {
@@ -419,7 +381,6 @@ const HeadForm = ({
       });
       setSavedFields(newSavedFields);
       
-      // Réinitialiser l'effet après 1.5 secondes
       const timer = setTimeout(() => {
         setSavedFields({});
       }, 1500);
@@ -465,7 +426,7 @@ const HeadForm = ({
         />
         <FormField
           control={form.control}
-          name="email"
+          name="mail"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Email</FormLabel>
@@ -473,7 +434,7 @@ const HeadForm = ({
                 <Input 
                   placeholder="Ex: john.doe@example.com" 
                   {...field} 
-                  className={savedFields.email ? savedAnimation : savedFieldStyle}
+                  className={savedFields.mail ? savedAnimation : savedFieldStyle}
                 />
               </FormControl>
             </FormItem>
@@ -481,7 +442,7 @@ const HeadForm = ({
         />
         <FormField
           control={form.control}
-          name="general_title"
+          name="title"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Titre professionnel</FormLabel>
@@ -489,7 +450,23 @@ const HeadForm = ({
                 <Input 
                   placeholder="Ex: Développeur Web Senior" 
                   {...field} 
-                  className={savedFields.general_title ? savedAnimation : savedFieldStyle}
+                  className={savedFields.title ? savedAnimation : savedFieldStyle}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="linkedin_url"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>URL LinkedIn</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Ex: https://www.linkedin.com/in/johndoe" 
+                  {...field} 
+                  className={savedFields.linkedin_url ? savedAnimation : savedFieldStyle}
                 />
               </FormControl>
             </FormItem>
@@ -500,37 +477,30 @@ const HeadForm = ({
   );
 };
 
-// Formulaire pour les expériences
 const ExperiencesForm = ({ 
   initialData, 
   onSave,
   lastSavedTime
 }: { 
-  initialData: Profile['experiences']['experiences'], 
-  onSave: (data: Profile['experiences']['experiences']) => void,
+  initialData: Profile['experiences'], 
+  onSave: (data: Profile['experiences']) => void,
   lastSavedTime: number
 }) => {
   const [experiences, setExperiences] = useState(initialData);
   const [savedSections, setSavedSections] = useState<boolean>(false);
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Surveiller les changements
   useEffect(() => {
-    // Marquer l'heure du dernier changement
     lastChangedTimeRef.current = Date.now();
-    // Réinitialiser l'animation lors d'un changement
     setSavedSections(false);
     onSave(experiences);
   }, [experiences, onSave]);
 
-  // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    // Seulement si une sauvegarde a eu lieu et après un changement
     if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
       console.log("Sauvegarde détectée, affichage de l'animation pour les expériences");
       setSavedSections(true);
       
-      // Réinitialiser après 1.5 secondes
       const timer = setTimeout(() => {
         setSavedSections(false);
       }, 1500);
@@ -541,11 +511,11 @@ const ExperiencesForm = ({
 
   const addExperience = () => {
     setExperiences([...experiences, {
-      post: "",
+      title: "",
       company: "",
       location: "",
       dates: "",
-      description: ""
+      full_descriptions: ""
     }]);
   };
 
@@ -553,7 +523,7 @@ const ExperiencesForm = ({
     setExperiences(experiences.filter((_, i) => i !== index));
   };
 
-  const updateExperience = (index: number, field: keyof Profile['experiences']['experiences'][0], value: string) => {
+  const updateExperience = (index: number, field: keyof Profile['experiences'][0], value: string) => {
     const updatedExperiences = [...experiences];
     updatedExperiences[index] = {
       ...updatedExperiences[index],
@@ -583,8 +553,8 @@ const ExperiencesForm = ({
             <div className="space-y-2">
               <label className="text-sm font-medium">Poste</label>
               <Input 
-                value={experience.post} 
-                onChange={(e) => updateExperience(index, 'post', e.target.value)}
+                value={experience.title} 
+                onChange={(e) => updateExperience(index, 'title', e.target.value)}
                 placeholder="Ex: Développeur Frontend"
                 className={savedSections ? savedAnimation : savedFieldStyle}
               />
@@ -620,8 +590,8 @@ const ExperiencesForm = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Textarea 
-              value={experience.description} 
-              onChange={(e) => updateExperience(index, 'description', e.target.value)}
+              value={experience.full_descriptions} 
+              onChange={(e) => updateExperience(index, 'full_descriptions', e.target.value)}
               placeholder="Description des responsabilités et réalisations"
               rows={4}
               className={savedSections ? savedAnimation : savedFieldStyle}
@@ -640,37 +610,30 @@ const ExperiencesForm = ({
   );
 };
 
-// Formulaire pour la formation
 const EducationForm = ({ 
   initialData, 
   onSave,
   lastSavedTime 
 }: { 
-  initialData: Profile['education']['educations'], 
-  onSave: (data: Profile['education']['educations']) => void,
+  initialData: Profile['educations'], 
+  onSave: (data: Profile['educations']) => void,
   lastSavedTime: number
 }) => {
   const [educations, setEducations] = useState(initialData);
   const [savedSections, setSavedSections] = useState<boolean>(false);
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Surveiller les changements
   useEffect(() => {
-    // Marquer l'heure du dernier changement
     lastChangedTimeRef.current = Date.now();
-    // Réinitialiser l'animation lors d'un changement
     setSavedSections(false);
     onSave(educations);
   }, [educations, onSave]);
 
-  // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    // Seulement si une sauvegarde a eu lieu et après un changement
     if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
       console.log("Sauvegarde détectée, affichage de l'animation pour les formations");
       setSavedSections(true);
       
-      // Réinitialiser après 1.5 secondes
       const timer = setTimeout(() => {
         setSavedSections(false);
       }, 1500);
@@ -681,10 +644,10 @@ const EducationForm = ({
 
   const addEducation = () => {
     setEducations([...educations, {
-      intitule: "",
-      etablissement: "",
+      title: "",
+      university: "",
       dates: "",
-      description: ""
+      full_description: ""
     }]);
   };
 
@@ -692,7 +655,7 @@ const EducationForm = ({
     setEducations(educations.filter((_, i) => i !== index));
   };
 
-  const updateEducation = (index: number, field: keyof Profile['education']['educations'][0], value: string) => {
+  const updateEducation = (index: number, field: keyof Profile['educations'][0], value: string) => {
     const updatedEducations = [...educations];
     updatedEducations[index] = {
       ...updatedEducations[index],
@@ -722,8 +685,8 @@ const EducationForm = ({
             <div className="space-y-2">
               <label className="text-sm font-medium">Intitulé</label>
               <Input 
-                value={education.intitule} 
-                onChange={(e) => updateEducation(index, 'intitule', e.target.value)}
+                value={education.title} 
+                onChange={(e) => updateEducation(index, 'title', e.target.value)}
                 placeholder="Ex: Master en Informatique"
                 className={savedSections ? savedAnimation : savedFieldStyle}
               />
@@ -731,8 +694,8 @@ const EducationForm = ({
             <div className="space-y-2">
               <label className="text-sm font-medium">Établissement</label>
               <Input 
-                value={education.etablissement} 
-                onChange={(e) => updateEducation(index, 'etablissement', e.target.value)}
+                value={education.university} 
+                onChange={(e) => updateEducation(index, 'university', e.target.value)}
                 placeholder="Ex: Université Paris Saclay"
                 className={savedSections ? savedAnimation : savedFieldStyle}
               />
@@ -750,8 +713,8 @@ const EducationForm = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Textarea 
-              value={education.description} 
-              onChange={(e) => updateEducation(index, 'description', e.target.value)}
+              value={education.full_description} 
+              onChange={(e) => updateEducation(index, 'full_description', e.target.value)}
               placeholder="Description du programme et des acquis"
               rows={4}
               className={savedSections ? savedAnimation : savedFieldStyle}
@@ -770,7 +733,6 @@ const EducationForm = ({
   );
 };
 
-// Formulaire pour les compétences
 const SkillsForm = ({ 
   initialData, 
   onSave,
@@ -781,29 +743,23 @@ const SkillsForm = ({
   lastSavedTime: number 
 }) => {
   const form = useForm({
-    defaultValues: initialData,
+    defaultValues: { description: initialData },
   });
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Observer pour détecter les changements de champ
   useEffect(() => {
     const subscription = form.watch((value) => {
-      // Marquer l'heure du dernier changement
       lastChangedTimeRef.current = Date.now();
-      // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
-      onSave(value as Profile['skills']);
+      onSave(value.description);
     });
     return () => subscription.unsubscribe();
   }, [form, onSave]);
 
-  // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    // Seulement si une sauvegarde a eu lieu et après un changement
     if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
       console.log("Sauvegarde détectée, affichage de l'animation pour les compétences");
-      // Marquer tous les champs comme sauvegardés
       const fields = Object.keys(form.getValues());
       const newSavedFields: Record<string, boolean> = {};
       fields.forEach(field => {
@@ -811,7 +767,6 @@ const SkillsForm = ({
       });
       setSavedFields(newSavedFields);
       
-      // Réinitialiser l'effet après 1.5 secondes
       const timer = setTimeout(() => {
         setSavedFields({});
       }, 1500);
@@ -845,7 +800,6 @@ const SkillsForm = ({
   );
 };
 
-// Formulaire pour les loisirs
 const HobbiesForm = ({ 
   initialData, 
   onSave,
@@ -856,29 +810,23 @@ const HobbiesForm = ({
   lastSavedTime: number
 }) => {
   const form = useForm({
-    defaultValues: initialData,
+    defaultValues: { description: initialData },
   });
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
   const lastChangedTimeRef = useRef<number>(0);
 
-  // Observer pour détecter les changements de champ
   useEffect(() => {
     const subscription = form.watch((value) => {
-      // Marquer l'heure du dernier changement
       lastChangedTimeRef.current = Date.now();
-      // Réinitialiser l'état des champs sauvegardés lorsqu'un champ est modifié
       setSavedFields({});
-      onSave(value as Profile['hobbies']);
+      onSave(value.description);
     });
     return () => subscription.unsubscribe();
   }, [form, onSave]);
 
-  // Effet pour montrer l'animation de sauvegarde
   useEffect(() => {
-    // Seulement si une sauvegarde a eu lieu et après un changement
     if (lastSavedTime > 0 && lastSavedTime > lastChangedTimeRef.current) {
       console.log("Sauvegarde détectée, affichage de l'animation pour les loisirs");
-      // Marquer tous les champs comme sauvegardés
       const fields = Object.keys(form.getValues());
       const newSavedFields: Record<string, boolean> = {};
       fields.forEach(field => {
@@ -886,7 +834,6 @@ const HobbiesForm = ({
       });
       setSavedFields(newSavedFields);
       
-      // Réinitialiser l'effet après 1.5 secondes
       const timer = setTimeout(() => {
         setSavedFields({});
       }, 1500);

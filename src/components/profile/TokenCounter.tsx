@@ -30,21 +30,22 @@ export const TokenCounter = ({ onRefreshRequest }: { onRefreshRequest?: (refresh
       console.log("Tentative de récupération des tokens depuis Firestore...");
       console.log("User ID:", userId);
       
-      const tokenStatsRef = doc(db, "token_stats", userId);
-      const tokenStatsDoc = await getDoc(tokenStatsRef);
+      // Adaptation à la nouvelle structure de données
+      const usageRef = doc(db, "usage", userId);
+      const usageDoc = await getDoc(usageRef);
       
-      if (tokenStatsDoc.exists()) {
-        const data = tokenStatsDoc.data();
-        console.log("Données récupérées:", data);
+      if (usageDoc.exists()) {
+        const data = usageDoc.data();
+        console.log("Données d'usage récupérées:", data);
         
-        if (data && typeof data.total_tokens === 'number') {
-          setTokens(data.total_tokens);
+        if (data && typeof data.total_usage === 'number') {
+          setTokens(data.total_usage);
         } else {
-          console.log("Le champ 'total_tokens' n'existe pas ou n'est pas un nombre");
+          console.log("Le champ 'total_usage' n'existe pas ou n'est pas un nombre");
           setTokens(0);
         }
       } else {
-        console.log("Aucun document trouvé pour cet utilisateur");
+        console.log("Aucun document d'usage trouvé pour cet utilisateur");
         setTokens(0);
       }
       

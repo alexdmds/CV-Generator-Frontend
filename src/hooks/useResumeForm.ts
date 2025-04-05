@@ -54,8 +54,8 @@ export function useResumeForm() {
   
   // Fonction pour ouvrir le dialogue de confirmation
   const openConfirmDialog = async () => {
-    // Sauvegarder d'abord la fiche de poste
-    const saved = await handleSaveJobDescription();
+    // Sauvegarder d'abord la fiche de poste sans afficher de toast
+    const saved = await handleSaveJobDescription(false);
     if (saved) {
       setConfirmDialogOpen(true);
     }
@@ -127,7 +127,8 @@ export function useResumeForm() {
   };
 
   // Fonction pour sauvegarder la fiche de poste sans générer le CV
-  const handleSaveJobDescription = async () => {
+  // Ajout d'un paramètre pour contrôler l'affichage du toast
+  const handleSaveJobDescription = async (showToast = true) => {
     if (!cvName) {
       toast({
         title: "Erreur",
@@ -157,14 +158,13 @@ export function useResumeForm() {
         toast
       });
       
-      if (saved) {
+      if (saved && showToast) {
         toast({
           title: "Sauvegardé",
           description: "La fiche de poste a été sauvegardée avec succès",
         });
-        return true;
       }
-      return false;
+      return saved;
     } catch (error) {
       console.error("Error saving job description:", error);
       toast({

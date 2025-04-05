@@ -1,12 +1,13 @@
 
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Save } from "lucide-react";
 
 interface JobDescriptionFormProps {
   jobDescription: string;
   setJobDescription: (description: string) => void;
   onGenerateClick: () => void;
+  onSaveClick?: () => Promise<boolean>;
   isEditing: boolean;
   cvName: string;
   isSubmitting?: boolean;
@@ -16,6 +17,7 @@ export function JobDescriptionForm({
   jobDescription, 
   setJobDescription, 
   onGenerateClick,
+  onSaveClick,
   isEditing,
   cvName,
   isSubmitting = false
@@ -39,24 +41,48 @@ export function JobDescriptionForm({
         </p>
       </div>
 
-      <Button
-        type="button"
-        onClick={onGenerateClick}
-        className="w-full"
-        disabled={!jobDescription.trim() || isSubmitting}
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Génération en cours...
-          </>
-        ) : (
-          <>
-            <FileText className="w-4 h-4 mr-2" />
-            Générer le CV
-          </>
+      <div className="flex gap-3">
+        {onSaveClick && (
+          <Button
+            type="button"
+            onClick={onSaveClick}
+            className="flex-1"
+            variant="outline"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sauvegarde...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Sauvegarder
+              </>
+            )}
+          </Button>
         )}
-      </Button>
+        
+        <Button
+          type="button"
+          onClick={onGenerateClick}
+          className="flex-1"
+          disabled={!jobDescription.trim() || isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Génération en cours...
+            </>
+          ) : (
+            <>
+              <FileText className="w-4 h-4 mr-2" />
+              Générer le CV
+            </>
+          )}
+        </Button>
+      </div>
     </form>
   );
 }

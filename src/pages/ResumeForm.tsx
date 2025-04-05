@@ -19,6 +19,7 @@ const ResumeForm = () => {
     isSubmitting,
     handleGenerateResume,
     handleCreateNewCV,
+    handleSaveJobDescription,
     navigate
   } = useResumeForm();
 
@@ -70,6 +71,7 @@ const ResumeForm = () => {
               jobDescription={jobDescription}
               setJobDescription={setJobDescription}
               onGenerateClick={handleGenerateResume}
+              onSaveClick={handleSaveJobDescription}
               isEditing={isEditing}
               cvName={cvName}
               isSubmitting={isSubmitting}

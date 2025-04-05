@@ -75,12 +75,15 @@ export function useResumeForm() {
         return;
       }
 
-      // Appel à l'API de génération
+      // Obtenir le jeton Firebase actuel
+      const token = await user.getIdToken(true);
+      
+      // Appel à l'API de génération avec le token Firebase
       const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/generate-cv", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer test-token",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ cv_name: cvName }),
       });

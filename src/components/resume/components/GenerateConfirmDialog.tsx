@@ -30,7 +30,7 @@ export function GenerateConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Générer le CV</AlertDialogTitle>
           <AlertDialogDescription>
-            Assurez-vous que votre profil est bien renseigné avant de générer le CV.
+            Assurez-vous que votre profil est bien renseigné dans la section "Profil" avant de générer le CV.
             Le processus peut prendre jusqu'à 1 minute.
           </AlertDialogDescription>
         </AlertDialogHeader>

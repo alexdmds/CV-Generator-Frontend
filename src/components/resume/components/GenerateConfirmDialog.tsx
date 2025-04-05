@@ -16,6 +16,7 @@ interface GenerateConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   isSubmitting: boolean;
+  isGenerating?: boolean;
 }
 
 export function GenerateConfirmDialog({
@@ -23,6 +24,7 @@ export function GenerateConfirmDialog({
   onOpenChange,
   onConfirm,
   isSubmitting,
+  isGenerating = false,
 }: GenerateConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -35,9 +37,9 @@ export function GenerateConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting}>Annuler</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={isSubmitting}>
-            {isSubmitting ? (
+          <AlertDialogCancel disabled={isSubmitting || isGenerating}>Annuler</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} disabled={isSubmitting || isGenerating}>
+            {isSubmitting || isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Génération en cours...

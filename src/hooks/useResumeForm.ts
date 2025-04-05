@@ -37,6 +37,12 @@ export function useResumeForm() {
   // État pour le dialogue de confirmation de génération
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   
+  // État pour suivre le processus de génération du CV
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // État pour stocker l'URL du PDF généré
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  
   // Get initial CV name from URL if present
   useEffect(() => {
     const nameFromUrl = searchParams.get('name');
@@ -75,6 +81,10 @@ export function useResumeForm() {
         return;
       }
 
+      // Marquer le début de la génération
+      setIsGenerating(true);
+      setConfirmDialogOpen(false);
+
       // Obtenir le jeton Firebase actuel
       const token = await user.getIdToken(true);
       
@@ -94,13 +104,16 @@ export function useResumeForm() {
 
       const data = await response.json();
       console.log("CV generation successful:", data);
+      
+      // Générer l'URL du PDF
+      const pdfPath = `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
+      setPdfUrl(pdfPath);
+      
       toast({
         title: "Succès !",
         description: "Votre CV a été généré avec succès.",
       });
       
-      // Naviguer vers la liste des CV
-      navigate("/resumes");
     } catch (error) {
       console.error("Error generating CV:", error);
       toast({
@@ -108,8 +121,10 @@ export function useResumeForm() {
         description: "Une erreur est survenue lors de la génération du CV",
         variant: "destructive",
       });
+      // Retourner à la liste des CV en cas d'erreur
+      navigate("/resumes");
     } finally {
-      setConfirmDialogOpen(false);
+      setIsGenerating(false);
     }
   };
 
@@ -192,6 +207,8 @@ export function useResumeForm() {
     navigate,
     confirmDialogOpen,
     setConfirmDialogOpen,
-    confirmGenerateCV
+    confirmGenerateCV,
+    isGenerating,
+    pdfUrl
   };
 }

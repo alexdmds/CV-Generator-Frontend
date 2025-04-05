@@ -33,6 +33,9 @@ export function useResumeForm() {
     handleGenerateResume: submitResume,
     handleCreateNewCV: createNewCV
   } = useCVSubmission();
+
+  // État pour le dialogue de confirmation de génération
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   
   // Get initial CV name from URL if present
   useEffect(() => {
@@ -49,9 +52,67 @@ export function useResumeForm() {
     }
   }, [id, cvName, navigate]);
   
+  // Fonction pour ouvrir le dialogue de confirmation
+  const openConfirmDialog = async () => {
+    // Sauvegarder d'abord la fiche de poste
+    const saved = await handleSaveJobDescription();
+    if (saved) {
+      setConfirmDialogOpen(true);
+    }
+  };
+  
+  // Fonction pour générer le CV après confirmation
+  const confirmGenerateCV = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour générer un CV",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+
+      // Appel à l'API de génération
+      const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/generate-cv", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-token",
+        },
+        body: JSON.stringify({ cv_name: cvName }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("CV generation successful:", data);
+      toast({
+        title: "Succès !",
+        description: "Votre CV a été généré avec succès.",
+      });
+      
+      // Naviguer vers la liste des CV
+      navigate("/resumes");
+    } catch (error) {
+      console.error("Error generating CV:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la génération du CV",
+        variant: "destructive",
+      });
+    } finally {
+      setConfirmDialogOpen(false);
+    }
+  };
+
   // Wrapper functions to pass the current state values
   const handleGenerateResume = async () => {
-    return submitResume(cvName, jobDescription);
+    openConfirmDialog();
   };
   
   const handleCreateNewCV = async () => {
@@ -62,7 +123,7 @@ export function useResumeForm() {
     return success;
   };
 
-  // New function to save job description without generating CV
+  // Fonction pour sauvegarder la fiche de poste sans générer le CV
   const handleSaveJobDescription = async () => {
     if (!cvName) {
       toast({
@@ -125,6 +186,9 @@ export function useResumeForm() {
     handleGenerateResume,
     handleCreateNewCV,
     handleSaveJobDescription,
-    navigate
+    navigate,
+    confirmDialogOpen,
+    setConfirmDialogOpen,
+    confirmGenerateCV
   };
 }

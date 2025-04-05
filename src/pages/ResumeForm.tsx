@@ -6,6 +6,7 @@ import { ArrowLeft, PencilIcon } from "lucide-react";
 import { useResumeForm } from "@/hooks/useResumeForm";
 import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
+import { GenerateConfirmDialog } from "@/components/resume/components/GenerateConfirmDialog";
 
 const ResumeForm = () => {
   const {
@@ -20,7 +21,10 @@ const ResumeForm = () => {
     handleGenerateResume,
     handleCreateNewCV,
     handleSaveJobDescription,
-    navigate
+    navigate,
+    confirmDialogOpen,
+    setConfirmDialogOpen,
+    confirmGenerateCV
   } = useResumeForm();
 
   // Wrap the function to match expected void return type
@@ -86,6 +90,13 @@ const ResumeForm = () => {
         cvName={cvName}
         setCvName={setCvName}
         onCreateClick={handleCreateClick}
+        isSubmitting={isSubmitting}
+      />
+
+      <GenerateConfirmDialog 
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        onConfirm={confirmGenerateCV}
         isSubmitting={isSubmitting}
       />
     </div>

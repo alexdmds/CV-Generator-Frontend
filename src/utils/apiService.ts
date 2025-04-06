@@ -33,10 +33,11 @@ export const checkExistingCV = async (
         return existingCV.pdf_url;
       }
       
-      // If we have the CV but no PDF URL, check if we can construct one
+      // If we have the CV but no PDF URL, construct the correct Storage URL
       if (existingCV) {
-        // Fix: Using the correct bucket name without 'firebasestorage.app'
+        // Correctly formatted Firebase Storage URL
         const pdfPath = `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${user.uid}%2Fcvs%2F${encodeURIComponent(cvName)}.pdf?alt=media`;
+        console.log("Constructed PDF URL:", pdfPath);
         return pdfPath;
       }
     }

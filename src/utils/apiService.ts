@@ -1,3 +1,4 @@
+
 import { User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db, storage } from "@/components/auth/firebase-config";
@@ -37,20 +38,30 @@ export const checkExistingCV = async (
       if (existingCV) {
         try {
           // Create a reference to the file in Firebase Storage
+          console.log(`Checking for PDF at path: ${user.uid}/cvs/${cvName}.pdf`);
           const storageRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
           
-          // Get the authenticated download URL
-          const authenticatedUrl = await getDownloadURL(storageRef);
-          console.log("Generated authenticated download URL:", authenticatedUrl);
+          // Get the authenticated download URL with a timeout
+          const timeoutPromise = new Promise<null>((_, reject) => {
+            setTimeout(() => reject(new Error("Timeout getting download URL")), 10000);
+          });
           
+          const urlPromise = getDownloadURL(storageRef);
+          
+          // Race between the download URL request and timeout
+          const authenticatedUrl = await Promise.race([urlPromise, timeoutPromise]) as string;
+          
+          console.log("Generated authenticated download URL:", authenticatedUrl);
           return authenticatedUrl;
         } catch (storageError) {
           console.error("Error getting authenticated download URL:", storageError);
+          // Return null to indicate no PDF was found, but don't throw an error
           return null;
         }
       }
     }
     
+    console.log("No existing CV found with name:", cvName);
     return null;
   } catch (error) {
     console.error("Error checking for existing CV:", error);
@@ -97,7 +108,16 @@ export const generateCVApi = async (
     // Otherwise, get an authenticated URL from Firebase Storage
     try {
       const storageRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
-      const authenticatedUrl = await getDownloadURL(storageRef);
+      
+      // Add timeout to avoid hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout getting download URL")), 15000);
+      });
+      
+      const urlPromise = getDownloadURL(storageRef);
+      
+      // Race between the download URL request and timeout
+      const authenticatedUrl = await Promise.race([urlPromise, timeoutPromise]) as string;
       
       return {
         success: true,

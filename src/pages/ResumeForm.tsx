@@ -32,15 +32,16 @@ const ResumeForm = () => {
     pdfUrl,
     checkForExistingCV,
     hasCheckedForExistingCV,
-    setHasCheckedForExistingCV
+    setHasCheckedForExistingCV,
+    isCheckingInProgress
   } = useResumeForm();
 
   // Check for existing CV when the component mounts or when cv name changes
   useEffect(() => {
-    if (cvName && !hasCheckedForExistingCV) {
+    if (cvName && !hasCheckedForExistingCV && !isCheckingInProgress) {
       checkForExistingCV(cvName);
     }
-  }, [cvName, checkForExistingCV, hasCheckedForExistingCV]);
+  }, [cvName, checkForExistingCV, hasCheckedForExistingCV, isCheckingInProgress]);
 
   // Reset the check flag when CV name changes
   useEffect(() => {
@@ -57,6 +58,8 @@ const ResumeForm = () => {
     handleDialogOpenChange(true);
   };
 
+  const isLoading = isGenerating || isChecking;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -65,7 +68,7 @@ const ResumeForm = () => {
           variant="ghost"
           onClick={() => navigate("/resumes")}
           className="mb-6 flex items-center gap-2"
-          disabled={isSubmitting || isGenerating}
+          disabled={isSubmitting || isLoading}
         >
           <ArrowLeft className="w-4 h-4" />
           Retour aux CVs
@@ -78,16 +81,16 @@ const ResumeForm = () => {
             size="icon" 
             className="h-8 w-8 ml-2" 
             onClick={handleRenameClick}
-            disabled={isGenerating}
+            disabled={isLoading}
           >
             <PencilIcon className="h-4 w-4" />
             <span className="sr-only">Modifier le nom</span>
           </Button>
         </div>
         
-        {(isGenerating || isChecking || pdfUrl) ? (
+        {(isLoading || pdfUrl) ? (
           <div className="w-full max-w-2xl mx-auto">
-            {(isGenerating || isChecking) && !pdfUrl && (
+            {isLoading && !pdfUrl && (
               <div className="text-center mb-6">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-medium text-gray-900">
@@ -142,7 +145,7 @@ const ResumeForm = () => {
                 onSaveClick={handleSaveJobDescription}
                 isEditing={isEditing}
                 cvName={cvName}
-                isSubmitting={isSubmitting || isGenerating || isChecking}
+                isSubmitting={isSubmitting || isLoading}
               />
             </CardContent>
           </Card>

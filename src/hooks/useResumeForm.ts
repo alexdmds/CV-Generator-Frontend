@@ -24,6 +24,7 @@ export function useResumeForm() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [hasCheckedForExistingCV, setHasCheckedForExistingCV] = useState(false);
+  const [isCheckingInProgress, setIsCheckingInProgress] = useState(false);
   
   const {
     cvNameDialogOpen,
@@ -57,11 +58,16 @@ export function useResumeForm() {
   
   // Check if a CV already exists with the given name
   const checkForExistingCV = useCallback(async (name: string) => {
-    if (name && !hasCheckedForExistingCV) {
-      await checkExistingCVAndDisplay(name);
-      setHasCheckedForExistingCV(true);
+    if (name && !hasCheckedForExistingCV && !isCheckingInProgress) {
+      setIsCheckingInProgress(true);
+      try {
+        await checkExistingCVAndDisplay(name, false);
+        setHasCheckedForExistingCV(true);
+      } finally {
+        setIsCheckingInProgress(false);
+      }
     }
-  }, [checkExistingCVAndDisplay, hasCheckedForExistingCV]);
+  }, [checkExistingCVAndDisplay, hasCheckedForExistingCV, isCheckingInProgress]);
   
   // Fonction pour ouvrir le dialogue de confirmation
   const openConfirmDialog = async () => {
@@ -163,6 +169,7 @@ export function useResumeForm() {
     pdfUrl,
     checkForExistingCV,
     hasCheckedForExistingCV,
-    setHasCheckedForExistingCV
+    setHasCheckedForExistingCV,
+    isCheckingInProgress
   };
 }

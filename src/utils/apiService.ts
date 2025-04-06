@@ -35,8 +35,10 @@ export const generateCVApi = async (
     const data = await response.json();
     console.log("CV generation API response:", data);
     
-    // Generate the PDF URL
-    const pdfPath = `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
+    // Use the actual PDF URL from the API response if available
+    // Fall back to generating it using the known pattern if not provided
+    const pdfPath = data.pdfUrl || data.pdf_url || 
+      `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
     
     return {
       success: true,

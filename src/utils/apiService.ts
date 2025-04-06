@@ -1,8 +1,8 @@
-
 import { User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/components/auth/firebase-config";
+import { db, storage } from "@/components/auth/firebase-config";
 import { CV } from "@/types/profile";
+import { ref, getDownloadURL } from "firebase/storage";
 
 interface GenerateCVResponse {
   success: boolean;
@@ -33,12 +33,21 @@ export const checkExistingCV = async (
         return existingCV.pdf_url;
       }
       
-      // If we have the CV but no PDF URL, construct the correct Storage URL
+      // If we have the CV but no PDF URL, construct the path and get authenticated URL
       if (existingCV) {
-        // Correctly formatted Firebase Storage URL
-        const pdfPath = `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${user.uid}%2Fcvs%2F${encodeURIComponent(cvName)}.pdf?alt=media`;
-        console.log("Constructed PDF URL:", pdfPath);
-        return pdfPath;
+        try {
+          // Create a reference to the file in Firebase Storage
+          const storageRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
+          
+          // Get the authenticated download URL
+          const authenticatedUrl = await getDownloadURL(storageRef);
+          console.log("Generated authenticated download URL:", authenticatedUrl);
+          
+          return authenticatedUrl;
+        } catch (storageError) {
+          console.error("Error getting authenticated download URL:", storageError);
+          return null;
+        }
       }
     }
     
@@ -78,14 +87,26 @@ export const generateCVApi = async (
     console.log("CV generation API response:", data);
     
     // Use the actual PDF URL from the API response if available
-    // Fall back to generating it using the correct Firebase Storage URL format
-    const pdfPath = data.pdfUrl || data.pdf_url || 
-      `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${user.uid}%2Fcvs%2F${encodeURIComponent(cvName)}.pdf?alt=media`;
+    if (data.pdfUrl || data.pdf_url) {
+      return {
+        success: true,
+        pdfPath: data.pdfUrl || data.pdf_url
+      };
+    }
     
-    return {
-      success: true,
-      pdfPath
-    };
+    // Otherwise, get an authenticated URL from Firebase Storage
+    try {
+      const storageRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
+      const authenticatedUrl = await getDownloadURL(storageRef);
+      
+      return {
+        success: true,
+        pdfPath: authenticatedUrl
+      };
+    } catch (storageError) {
+      console.error("Error getting authenticated download URL:", storageError);
+      throw new Error("Impossible d'accéder au PDF généré");
+    }
   } catch (error) {
     console.error("Error calling CV generation API:", error);
     return {

@@ -13,7 +13,7 @@ export function useCVGeneration() {
   const navigate = useNavigate();
 
   // Function to check if a CV already exists and display it
-  const checkExistingCVAndDisplay = async (cvName: string) => {
+  const checkExistingCVAndDisplay = async (cvName: string, showToast = true) => {
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -33,10 +33,12 @@ export function useCVGeneration() {
       
       if (existingPdfUrl) {
         setPdfUrl(existingPdfUrl);
-        toast({
-          title: "CV trouvé",
-          description: "Le CV existe déjà et a été chargé",
-        });
+        if (showToast) {
+          toast({
+            title: "CV trouvé",
+            description: "Le CV existe déjà et a été chargé",
+          });
+        }
         return true;
       }
       

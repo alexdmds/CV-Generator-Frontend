@@ -30,15 +30,22 @@ const ResumeForm = () => {
     isGenerating,
     isChecking,
     pdfUrl,
-    checkForExistingCV
+    checkForExistingCV,
+    hasCheckedForExistingCV,
+    setHasCheckedForExistingCV
   } = useResumeForm();
 
   // Check for existing CV when the component mounts or when cv name changes
   useEffect(() => {
-    if (cvName) {
+    if (cvName && !hasCheckedForExistingCV) {
       checkForExistingCV(cvName);
     }
-  }, [cvName, checkForExistingCV]);
+  }, [cvName, checkForExistingCV, hasCheckedForExistingCV]);
+
+  // Reset the check flag when CV name changes
+  useEffect(() => {
+    setHasCheckedForExistingCV(false);
+  }, [cvName, setHasCheckedForExistingCV]);
 
   // Wrap the function to match expected void return type
   const handleCreateClick = async () => {

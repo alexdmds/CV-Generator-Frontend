@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCVData } from "./useCVData";
 import { useCVNameDialog } from "./useCVNameDialog";
@@ -40,17 +40,26 @@ export function useResumeForm() {
   const confirmDialog = useConfirmDialog();
   const { 
     isGenerating, 
+    isChecking,
     pdfUrl, 
-    generateCV 
+    generateCV,
+    checkExistingCVAndDisplay
   } = useCVGeneration();
   
   // Get initial CV name from URL if present
-  useState(() => {
+  useEffect(() => {
     const nameFromUrl = searchParams.get('name');
     if (nameFromUrl) {
       setCvName(decodeURIComponent(nameFromUrl));
     }
-  });
+  }, [searchParams, setCvName]);
+  
+  // Check if a CV already exists with the given name
+  const checkForExistingCV = useCallback(async (name: string) => {
+    if (name) {
+      await checkExistingCVAndDisplay(name);
+    }
+  }, [checkExistingCVAndDisplay]);
   
   // Fonction pour ouvrir le dialogue de confirmation
   const openConfirmDialog = async () => {
@@ -148,6 +157,8 @@ export function useResumeForm() {
     setConfirmDialogOpen: confirmDialog.setIsOpen,
     confirmGenerateCV,
     isGenerating,
-    pdfUrl
+    isChecking,
+    pdfUrl,
+    checkForExistingCV
   };
 }

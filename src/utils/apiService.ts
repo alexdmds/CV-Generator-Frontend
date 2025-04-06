@@ -1,11 +1,51 @@
 
 import { User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/components/auth/firebase-config";
+import { CV } from "@/types/profile";
 
 interface GenerateCVResponse {
   success: boolean;
   message?: string;
   pdfPath?: string;
 }
+
+/**
+ * Checks if a CV with the given name already exists for the user
+ */
+export const checkExistingCV = async (
+  user: User,
+  cvName: string
+): Promise<string | null> => {
+  try {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const cvs = userData.cvs || [];
+      
+      // Find the CV with the matching name
+      const existingCV = cvs.find((cv: CV) => cv.cv_name === cvName);
+      
+      if (existingCV && existingCV.pdf_url) {
+        console.log("Found existing CV with PDF URL:", existingCV.pdf_url);
+        return existingCV.pdf_url;
+      }
+      
+      // If we have the CV but no PDF URL, check if we can construct one
+      if (existingCV) {
+        const pdfPath = `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
+        return pdfPath;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error checking for existing CV:", error);
+    return null;
+  }
+};
 
 /**
  * Generates a CV by calling the CV generation API

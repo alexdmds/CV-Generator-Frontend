@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
@@ -7,6 +8,7 @@ import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
 import { GenerateConfirmDialog } from "@/components/resume/components/GenerateConfirmDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect } from "react";
 
 const ResumeForm = () => {
   const {
@@ -26,8 +28,17 @@ const ResumeForm = () => {
     setConfirmDialogOpen,
     confirmGenerateCV,
     isGenerating,
-    pdfUrl
+    isChecking,
+    pdfUrl,
+    checkForExistingCV
   } = useResumeForm();
+
+  // Check for existing CV when the component mounts or when cv name changes
+  useEffect(() => {
+    if (cvName) {
+      checkForExistingCV(cvName);
+    }
+  }, [cvName, checkForExistingCV]);
 
   // Wrap the function to match expected void return type
   const handleCreateClick = async () => {
@@ -67,13 +78,21 @@ const ResumeForm = () => {
           </Button>
         </div>
         
-        {isGenerating ? (
+        {(isGenerating || isChecking || pdfUrl) ? (
           <div className="w-full max-w-2xl mx-auto">
-            <div className="text-center mb-6">
-              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-gray-900">Génération du CV en cours...</h3>
-              <p className="text-sm text-gray-500 mt-2">Le processus peut prendre jusqu'à 1 minute.</p>
-            </div>
+            {(isGenerating || isChecking) && !pdfUrl && (
+              <div className="text-center mb-6">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                <h3 className="text-xl font-medium text-gray-900">
+                  {isGenerating ? "Génération du CV en cours..." : "Recherche du CV existant..."}
+                </h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  {isGenerating 
+                    ? "Le processus peut prendre jusqu'à 1 minute." 
+                    : "Vérification si un CV existe déjà avec ce nom..."}
+                </p>
+              </div>
+            )}
             
             {pdfUrl && (
               <div className="mt-8">
@@ -116,7 +135,7 @@ const ResumeForm = () => {
                 onSaveClick={handleSaveJobDescription}
                 isEditing={isEditing}
                 cvName={cvName}
-                isSubmitting={isSubmitting || isGenerating}
+                isSubmitting={isSubmitting || isGenerating || isChecking}
               />
             </CardContent>
           </Card>

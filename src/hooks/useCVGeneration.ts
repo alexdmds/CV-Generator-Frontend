@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
+import { generateCVApi } from "@/utils/apiService";
 
 export function useCVGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -27,36 +28,21 @@ export function useCVGeneration() {
       // Marquer le début de la génération
       setIsGenerating(true);
 
-      // Obtenir le jeton Firebase actuel
-      const token = await user.getIdToken(true);
-      
-      // Appel à l'API de génération avec le token Firebase
-      const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/generate-cv", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ cv_name: cvName }),
-      });
+      // Appel à l'API de génération via notre service
+      const result = await generateCVApi(user, cvName);
 
-      if (!response.ok) {
-        throw new Error(`Erreur: ${response.status}`);
+      if (result.success && result.pdfPath) {
+        setPdfUrl(result.pdfPath);
+        
+        toast({
+          title: "Succès !",
+          description: "Votre CV a été généré avec succès.",
+        });
+        
+        return true;
+      } else {
+        throw new Error(result.message || "Échec de la génération du CV");
       }
-
-      const data = await response.json();
-      console.log("CV generation successful:", data);
-      
-      // Générer l'URL du PDF
-      const pdfPath = `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
-      setPdfUrl(pdfPath);
-      
-      toast({
-        title: "Succès !",
-        description: "Votre CV a été généré avec succès.",
-      });
-      
-      return true;
     } catch (error) {
       console.error("Error generating CV:", error);
       toast({

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCVData } from "./useCVData";
 import { useCVNameDialog } from "./useCVNameDialog";
@@ -7,6 +7,8 @@ import { useCVSubmission } from "./useCVSubmission";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
 import { saveCVToFirestore } from "@/utils/cvUtils";
+import { useCVGeneration } from "./useCVGeneration";
+import { useConfirmDialog } from "./useConfirmDialog";
 
 export function useResumeForm() {
   const { 
@@ -34,98 +36,35 @@ export function useResumeForm() {
     handleCreateNewCV: createNewCV
   } = useCVSubmission();
 
-  // État pour le dialogue de confirmation de génération
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  
-  // État pour suivre le processus de génération du CV
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  // État pour stocker l'URL du PDF généré
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  // Using our new hooks
+  const confirmDialog = useConfirmDialog();
+  const { 
+    isGenerating, 
+    pdfUrl, 
+    generateCV 
+  } = useCVGeneration();
   
   // Get initial CV name from URL if present
-  useEffect(() => {
+  useState(() => {
     const nameFromUrl = searchParams.get('name');
     if (nameFromUrl) {
       setCvName(decodeURIComponent(nameFromUrl));
     }
-  }, [searchParams, setCvName]);
-  
-  // Show the name dialog if we're creating a new CV and don't have a name
-  useEffect(() => {
-    if (id === "new" && !cvName) {
-      navigate('/resumes');
-    }
-  }, [id, cvName, navigate]);
+  });
   
   // Fonction pour ouvrir le dialogue de confirmation
   const openConfirmDialog = async () => {
     // Sauvegarder d'abord la fiche de poste sans afficher de toast
     const saved = await handleSaveJobDescription(false);
     if (saved) {
-      setConfirmDialogOpen(true);
+      confirmDialog.openDialog();
     }
   };
   
   // Fonction pour générer le CV après confirmation
   const confirmGenerateCV = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        toast({
-          title: "Erreur d'authentification",
-          description: "Vous devez être connecté pour générer un CV",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-
-      // Marquer le début de la génération
-      setIsGenerating(true);
-      setConfirmDialogOpen(false);
-
-      // Obtenir le jeton Firebase actuel
-      const token = await user.getIdToken(true);
-      
-      // Appel à l'API de génération avec le token Firebase
-      const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/generate-cv", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ cv_name: cvName }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("CV generation successful:", data);
-      
-      // Générer l'URL du PDF
-      const pdfPath = `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
-      setPdfUrl(pdfPath);
-      
-      toast({
-        title: "Succès !",
-        description: "Votre CV a été généré avec succès.",
-      });
-      
-    } catch (error) {
-      console.error("Error generating CV:", error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de la génération du CV",
-        variant: "destructive",
-      });
-      // Retourner à la liste des CV en cas d'erreur
-      navigate("/resumes");
-    } finally {
-      setIsGenerating(false);
-    }
+    confirmDialog.closeDialog();
+    await generateCV(cvName);
   };
 
   // Wrapper functions to pass the current state values
@@ -142,7 +81,6 @@ export function useResumeForm() {
   };
 
   // Fonction pour sauvegarder la fiche de poste sans générer le CV
-  // Ajout d'un paramètre pour contrôler l'affichage du toast
   const handleSaveJobDescription = async (showToast = true) => {
     if (!cvName) {
       toast({
@@ -205,8 +143,8 @@ export function useResumeForm() {
     handleCreateNewCV,
     handleSaveJobDescription,
     navigate,
-    confirmDialogOpen,
-    setConfirmDialogOpen,
+    confirmDialogOpen: confirmDialog.isOpen,
+    setConfirmDialogOpen: confirmDialog.setIsOpen,
     confirmGenerateCV,
     isGenerating,
     pdfUrl

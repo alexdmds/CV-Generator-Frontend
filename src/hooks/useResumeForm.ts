@@ -32,8 +32,8 @@ export function useResumeForm() {
   
   const {
     isSubmitting,
-    handleGenerateResume: submitResume,
-    handleCreateNewCV: createNewCV
+    handleCreateNewCV,
+    handleUpdateCV
   } = useCVSubmission();
 
   // Using our new hooks
@@ -72,8 +72,9 @@ export function useResumeForm() {
     openConfirmDialog();
   };
   
-  const handleCreateNewCV = async () => {
-    const success = await createNewCV(cvName, jobDescription);
+  // Wrapper for creating new CV with current state values
+  const handleCreateNewCVWithState = async () => {
+    const success = await handleCreateNewCV(cvName, jobDescription);
     if (success) {
       setCvNameDialogOpen(false);
     }
@@ -140,7 +141,7 @@ export function useResumeForm() {
     isEditing,
     isSubmitting,
     handleGenerateResume,
-    handleCreateNewCV,
+    handleCreateNewCV: handleCreateNewCVWithState,
     handleSaveJobDescription,
     navigate,
     confirmDialogOpen: confirmDialog.isOpen,

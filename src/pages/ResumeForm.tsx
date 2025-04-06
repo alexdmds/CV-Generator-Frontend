@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
@@ -92,10 +91,8 @@ const ResumeForm = () => {
                     Retour aux CVs
                   </Button>
                   <Button 
-                    as="a" 
-                    href={pdfUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                    variant="default" 
+                    onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Télécharger le PDF

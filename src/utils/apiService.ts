@@ -35,7 +35,8 @@ export const checkExistingCV = async (
       
       // If we have the CV but no PDF URL, check if we can construct one
       if (existingCV) {
-        const pdfPath = `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
+        // Corrected URL pattern for Firebase Storage
+        const pdfPath = `https://storage.googleapis.com/cv-generator-447314.appspot.com/${user.uid}/cvs/${cvName}.pdf`;
         return pdfPath;
       }
     }
@@ -76,9 +77,9 @@ export const generateCVApi = async (
     console.log("CV generation API response:", data);
     
     // Use the actual PDF URL from the API response if available
-    // Fall back to generating it using the known pattern if not provided
+    // Fall back to generating it using the corrected pattern if not provided
     const pdfPath = data.pdfUrl || data.pdf_url || 
-      `https://cv-generator-447314.firebasestorage.app/${user.uid}/${cvName}.pdf`;
+      `https://storage.googleapis.com/cv-generator-447314.appspot.com/${user.uid}/cvs/${cvName}.pdf`;
     
     return {
       success: true,

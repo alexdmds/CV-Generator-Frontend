@@ -35,6 +35,7 @@ export function usePdfViewer() {
       }
       
       const directUrl = getImmediatePdfUrl(user.uid, cvName);
+      console.log(`Loading PDF at URL: ${directUrl}`);
       setPdfUrl(directUrl);
       setLoadFailed(false);
       

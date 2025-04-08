@@ -11,10 +11,12 @@ interface GenerateCVResponse {
   pdfPath?: string;
 }
 
-// Méthode simplifiée pour obtenir l'URL directe sans passer par Firebase
+// Méthode pour obtenir l'URL directe avec encodage correct des espaces
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
-  // Utiliser la structure directe du bucket public
+  // Encoder le nom du CV avant de l'utiliser dans l'URL
+  // Utiliser encodeURIComponent pour gérer correctement les espaces et caractères spéciaux
   const encodedName = encodeURIComponent(cvName);
+  console.log(`Original name: "${cvName}", Encoded name: "${encodedName}"`);
   return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
 };
 
@@ -27,9 +29,9 @@ export const checkExistingCV = async (
   cvName: string
 ): Promise<string | null> => {
   try {
-    // Essayer directement l'URL publique
+    // Essayer directement l'URL publique avec encodage correct
     const directUrl = getDirectPdfUrl(user.uid, cvName);
-    console.log("Trying direct public URL first:", directUrl);
+    console.log("Checking CV existence with URL:", directUrl);
     
     // On ne fait pas de vérification d'existence, on suppose que le fichier existe
     // et on laisse le navigateur gérer l'affichage d'erreur si nécessaire

@@ -1,11 +1,10 @@
 
-import { FileText, Loader2, FileX, RefreshCcw, Download, ArrowUpRight } from "lucide-react";
+import { FileText, Loader2, FileX, RefreshCcw, Download, ArrowUpRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface CVPreviewPanelProps {
   isGenerating: boolean;
@@ -25,6 +24,7 @@ export const CVPreviewPanel = ({
   const [pdfLoadError, setPdfLoadError] = useState(false);
   const [useDirectView, setUseDirectView] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   
   // Réinitialiser l'état d'erreur lorsque l'URL du PDF change
   useEffect(() => {
@@ -33,17 +33,26 @@ export const CVPreviewPanel = ({
       setPdfLoadError(false);
       setUseDirectView(false);
       setPdfLoaded(false);
+      setIsRetrying(false);
       
       // Essayer de précharger l'URL pour vérifier si elle est accessible
-      fetch(pdfUrl, { method: 'HEAD', mode: 'no-cors' })
-        .then(() => {
+      const precheck = async () => {
+        try {
+          console.log("Prechecking PDF URL...");
+          await fetch(pdfUrl, { 
+            method: 'HEAD', 
+            mode: 'no-cors',
+            cache: 'no-cache' 
+          });
           console.log("PDF URL precheck success");
           setPdfLoaded(true);
-        })
-        .catch(error => {
-          console.error("PDF URL precheck failed:", error);
-          // Pas de setPdfLoadError, on laisse l'iframe essayer
-        });
+        } catch (error) {
+          console.warn("PDF URL precheck warning:", error);
+          // On ne marque pas comme erreur pour laisser l'iframe essayer
+        }
+      };
+      
+      precheck();
     }
   }, [pdfUrl]);
 
@@ -62,7 +71,13 @@ export const CVPreviewPanel = ({
     console.log("Retrying CV loading...");
     setPdfLoadError(false);
     setUseDirectView(false);
+    setIsRetrying(true);
     retryCheckForExistingCV();
+    
+    // Forcer un nouveau chargement de l'iframe
+    setTimeout(() => {
+      setIsRetrying(false);
+    }, 500);
   };
   
   const handleOpenInNewTab = () => {
@@ -80,7 +95,7 @@ export const CVPreviewPanel = ({
   const handleDownload = () => {
     if (pdfUrl) {
       console.log("Downloading PDF:", pdfUrl);
-      // Téléchargement direct
+      // Téléchargement direct via un lien temporaire
       const link = document.createElement('a');
       link.href = pdfUrl;
       link.setAttribute('download', 'cv.pdf');
@@ -139,14 +154,22 @@ export const CVPreviewPanel = ({
             ) : (
               <>
                 <div className="relative">
-                  <iframe 
-                    src={pdfUrl}
-                    className="w-full h-[500px] border border-gray-300"
-                    title="CV généré"
-                    onError={handlePdfError}
-                    onLoad={handlePdfLoad}
-                    sandbox="allow-same-origin allow-scripts allow-forms"
-                  />
+                  {!isRetrying && (
+                    <iframe 
+                      key={`pdf-iframe-${pdfUrl}`}
+                      src={pdfUrl}
+                      className="w-full h-[500px] border border-gray-300"
+                      title="CV généré"
+                      onError={handlePdfError}
+                      onLoad={handlePdfLoad}
+                      sandbox="allow-same-origin allow-scripts allow-forms"
+                    />
+                  )}
+                  {isRetrying && (
+                    <div className="w-full h-[500px] flex items-center justify-center bg-gray-100">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
                   <Button 
@@ -174,13 +197,13 @@ export const CVPreviewPanel = ({
               <h3 className="text-lg font-medium text-gray-900">
                 {pdfLoadError ? "Erreur de chargement du PDF" : "CV pas encore généré"}
               </h3>
-              <p className="text-gray-500 mt-2">
+              <p className="text-gray-500 mt-2 mb-4">
                 {pdfLoadError 
                   ? "Impossible d'afficher le PDF dans l'aperçu. Essayez de l'ouvrir directement."
                   : "Aucun CV n'a encore été généré avec ce nom."}
               </p>
               
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {pdfLoadError && pdfUrl && (
                   <Button 
                     variant="default" 
@@ -188,7 +211,7 @@ export const CVPreviewPanel = ({
                     className="flex items-center"
                     size="sm"
                   >
-                    <FileText className="w-4 h-4 mr-2" />
+                    <Eye className="w-4 h-4 mr-2" />
                     Utiliser la vue directe
                   </Button>
                 )}
@@ -206,15 +229,27 @@ export const CVPreviewPanel = ({
                 )}
                 
                 {pdfUrl && (
-                  <Button 
-                    variant="outline" 
-                    onClick={handleDownload}
-                    className="flex items-center"
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Télécharger
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleOpenInNewTab}
+                      className="flex items-center"
+                      size="sm"
+                    >
+                      <ArrowUpRight className="w-4 h-4 mr-2" />
+                      Ouvrir dans un nouvel onglet
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={handleDownload}
+                      className="flex items-center"
+                      size="sm"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Télécharger
+                    </Button>
+                  </>
                 )}
               </div>
             </div>

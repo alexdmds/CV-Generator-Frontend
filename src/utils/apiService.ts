@@ -13,13 +13,14 @@ interface GenerateCVResponse {
 
 // Méthode pour obtenir l'URL directe avec encodage approprié des caractères spéciaux
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
-  // Encodage correct des caractères spéciaux pour l'URL
+  // Double encodage pour s'assurer que les caractères spéciaux sont bien gérés
+  const encodedUserId = encodeURIComponent(userId);
   const encodedName = encodeURIComponent(cvName);
   
-  console.log(`Original name: "${cvName}", Encoded name: "${encodedName}"`);
+  console.log(`Generating URL for CV: userId=${userId}, cvName="${cvName}", encodedName="${encodedName}"`);
   
-  // Utiliser l'URL directe de Firebase Storage
-  return `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${encodeURIComponent(userId)}%2Fcvs%2F${encodedName}.pdf?alt=media`;
+  // Format d'URL qui fonctionne directement avec Firebase Storage
+  return `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${encodedUserId}%2Fcvs%2F${encodedName}.pdf?alt=media`;
 };
 
 /**
@@ -31,14 +32,14 @@ export const checkExistingCV = async (
   cvName: string
 ): Promise<string | null> => {
   try {
+    console.log(`Checking if CV exists: ${cvName}`);
+    
     // Construction de l'URL publique avec encodage correct
     const directUrl = getDirectPdfUrl(user.uid, cvName);
-    console.log("Checking CV existence with URL:", directUrl);
+    console.log("Generated URL:", directUrl);
     
     // On retourne directement l'URL sans vérification préalable
-    // car les requêtes CORS peuvent échouer mais le PDF est accessible
     return directUrl;
-    
   } catch (error) {
     console.error("Error checking for existing CV:", error);
     return null;

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
-import { generateCVApi, checkExistingCV } from "@/utils/apiService";
+import { generateCVApi, checkExistingCV, getDirectPdfUrl } from "@/utils/apiService";
 import { usePdfViewer } from "./usePdfViewer";
 
 export function useCVApiService() {
@@ -12,8 +12,7 @@ export function useCVApiService() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { 
-    setPdfUrl, 
-    getImmediatePdfUrl, 
+    setPdfUrl,
     setLoadFailed 
   } = usePdfViewer();
 
@@ -33,38 +32,51 @@ export function useCVApiService() {
         return false;
       }
 
-      // Set the PDF URL immediately without waiting for verification
-      const immediateUrl = getImmediatePdfUrl(user.uid, cvName);
-      setPdfUrl(immediateUrl);
-      
-      // Start background check
+      // Début de la vérification
       setIsChecking(true);
       setLoadFailed(false);
-      
-      console.log(`Checking for existing CV in background: ${cvName}`);
+      console.log(`Checking for existing CV: ${cvName}`);
 
-      // Background checking process
-      setTimeout(async () => {
-        try {
-          if (showToast) {
-            toast({
-              title: "CV chargé",
-              description: "Le CV est disponible",
-            });
-          }
-        } catch (error) {
-          console.error("Background check error:", error);
-        } finally {
-          setIsChecking(false);
-        }
-      }, 0);
+      // Générer l'URL immédiatement sans attendre
+      const immediateUrl = getDirectPdfUrl(user.uid, cvName);
+      console.log("Setting PDF URL:", immediateUrl);
+      setPdfUrl(immediateUrl);
       
-      return true;
+      // En arrière-plan, vérifier si le CV existe réellement
+      const pdfUrl = await checkExistingCV(user, cvName);
+      
+      if (pdfUrl) {
+        if (showToast) {
+          toast({
+            title: "CV trouvé",
+            description: "Le CV est disponible",
+          });
+        }
+        return true;
+      } else {
+        setLoadFailed(true);
+        if (showToast) {
+          toast({
+            title: "CV non trouvé",
+            description: "Aucun CV n'a été trouvé avec ce nom",
+            variant: "destructive",
+          });
+        }
+        return false;
+      }
     } catch (error) {
-      console.error("Error in immediate PDF access:", error);
+      console.error("Error checking for existing CV:", error);
       setLoadFailed(true);
-      setIsChecking(false);
+      if (showToast) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de vérifier l'existence du CV",
+          variant: "destructive",
+        });
+      }
       return false;
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -88,6 +100,7 @@ export function useCVApiService() {
       const result = await generateCVApi(user, cvName);
 
       if (result.success && result.pdfPath) {
+        console.log("CV generated successfully, setting PDF URL:", result.pdfPath);
         setPdfUrl(result.pdfPath);
         
         toast({

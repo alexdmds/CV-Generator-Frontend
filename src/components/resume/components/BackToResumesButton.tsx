@@ -18,8 +18,14 @@ export const BackToResumesButton = ({
     if (onClick) {
       onClick();
     } else {
-      console.log("Navigating back to /resumes");
-      navigate("/resumes");
+      try {
+        console.log("Navigating back to /resumes");
+        navigate("/resumes");
+      } catch (error) {
+        console.error("Navigation error:", error);
+        // Fallback en cas d'erreur de navigation
+        window.location.href = "/resumes";
+      }
     }
   };
   

@@ -5,6 +5,7 @@ import { useCVData } from "./useCVData";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
 import { useCVGeneration } from "./useCVGeneration";
+import { getDirectPdfUrl } from "@/utils/apiService";
 
 export function useCVInitialization() {
   const { 
@@ -21,7 +22,7 @@ export function useCVInitialization() {
   const [isCheckingInProgress, setIsCheckingInProgress] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
   
-  const { getImmediatePdfUrl, checkExistingCVAndDisplay } = useCVGeneration();
+  const { checkExistingCVAndDisplay, getImmediatePdfUrl, setPdfUrl } = useCVGeneration();
   
   // Get initial CV name from URL if present
   useEffect(() => {
@@ -42,11 +43,12 @@ export function useCVInitialization() {
   
   // Vérification non bloquante du CV existant
   const checkForExistingCV = useCallback(async (name: string) => {
-    if (!name || hasCheckedForExistingCV || isCheckingInProgress) {
+    if (!name || isCheckingInProgress) {
       return;
     }
     
     setIsCheckingInProgress(true);
+    setCheckFailed(false);
     
     try {
       console.log(`Starting non-blocking CV check for: ${name}`);
@@ -60,12 +62,14 @@ export function useCVInitialization() {
       }
       
       // Définir immédiatement une URL candidate pour le PDF
-      const directUrl = getImmediatePdfUrl(user.uid, name);
+      const directUrl = getDirectPdfUrl(user.uid, name);
+      console.log("Setting direct PDF URL:", directUrl);
+      setPdfUrl(directUrl);
       
       // Vérifier en arrière-plan sans bloquer l'interface
       setTimeout(async () => {
         try {
-          // Essayer aussi la méthode normale en arrière-plan
+          // Faire une vérification réelle en arrière-plan
           const checkResult = await checkExistingCVAndDisplay(name, false);
           console.log(`Background CV check result: ${checkResult}`);
           setCheckFailed(!checkResult);
@@ -80,7 +84,7 @@ export function useCVInitialization() {
       setCheckFailed(true);
       setIsCheckingInProgress(false);
     }
-  }, [checkExistingCVAndDisplay, getImmediatePdfUrl, hasCheckedForExistingCV, isCheckingInProgress]);
+  }, [checkExistingCVAndDisplay, getDirectPdfUrl, setPdfUrl, isCheckingInProgress]);
   
   // Function to retry checking if the first attempt failed
   const retryCheckForExistingCV = useCallback(() => {

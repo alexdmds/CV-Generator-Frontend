@@ -10,24 +10,42 @@ export function usePdfViewer() {
   const [loadFailed, setLoadFailed] = useState(false);
   const { toast } = useToast();
 
-  // Surveiller les changements d'URL et vérifier si le PDF est accessible
+  // Surveiller les changements d'URL et effectuer des actions
   useEffect(() => {
     if (pdfUrl) {
-      console.log("PDF URL updated:", pdfUrl);
+      console.log("PDF URL updated in usePdfViewer:", pdfUrl);
       
-      // Pas de vérification immédiate par fetch car les CORS peuvent bloquer
-      // Mais on réinitialise l'état d'erreur pour donner une nouvelle chance
+      // Réinitialiser l'état d'erreur quand l'URL change
       setLoadFailed(false);
+      
+      // Tester l'accessibilité de l'URL en arrière-plan sans bloquer l'interface
+      const testAccessibility = async () => {
+        try {
+          // Utiliser fetch avec no-cors pour éviter les problèmes CORS
+          const response = await fetch(pdfUrl, { 
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-cache'
+          });
+          console.log("PDF URL seems accessible");
+        } catch (error) {
+          // Ne pas marquer comme échoué ici, laisser l'iframe essayer
+          console.warn("PDF URL might not be directly accessible:", error);
+        }
+      };
+      
+      testAccessibility();
     }
   }, [pdfUrl]);
 
-  // Récupère l'URL directe d'un PDF dans Firebase Storage en encodant correctement le nom
+  // Récupère l'URL directe d'un PDF dans Firebase Storage
   const getImmediatePdfUrl = (userId: string, cvName: string): string => {
     return getDirectPdfUrl(userId, cvName);
   };
 
   // Définir une URL de PDF directement
   const loadPdf = (url: string) => {
+    console.log("Loading PDF directly with URL:", url);
     setPdfUrl(url);
     setLoadFailed(false);
   };
@@ -47,9 +65,9 @@ export function usePdfViewer() {
         return false;
       }
       
-      // URL construite avec encodage double pour gérer les caractères spéciaux
+      // URL construite avec encodage approprié
       const directUrl = getImmediatePdfUrl(user.uid, cvName);
-      console.log(`Loading PDF at URL: ${directUrl}`);
+      console.log(`Loading PDF for CV "${cvName}" at URL: ${directUrl}`);
       setPdfUrl(directUrl);
       
       return true;
@@ -69,7 +87,7 @@ export function usePdfViewer() {
     
     toast({
       title: "Erreur de chargement",
-      description: "Impossible de charger le PDF. Essayez de le télécharger directement.",
+      description: "Impossible de charger le PDF dans l'aperçu. Essayez de le télécharger directement.",
       variant: "destructive",
     });
   };

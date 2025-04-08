@@ -15,6 +15,8 @@ export function useCVGeneration() {
 
   // Function to check if a CV already exists and display it
   const checkExistingCVAndDisplay = async (cvName: string, showToast = true) => {
+    if (!cvName) return false;
+    
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -30,52 +32,26 @@ export function useCVGeneration() {
       // Set checking state
       setIsChecking(true);
       setCheckFailed(false);
+      setPdfUrl(null);
       
       console.log(`Checking for existing CV: ${cvName}`);
 
-      // Add timeout to the whole operation
-      const timeoutPromise = new Promise<boolean>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error("Vérification du CV existant a expiré"));
-        }, 10000); // 10 second timeout
-      });
-
       // Check if CV already exists
-      const checkPromise = new Promise<boolean>(async (resolve) => {
-        try {
-          const existingPdfUrl = await checkExistingCV(user, cvName);
-          
-          if (existingPdfUrl) {
-            setPdfUrl(existingPdfUrl);
-            if (showToast) {
-              toast({
-                title: "CV trouvé",
-                description: "Le CV existe déjà et a été chargé",
-              });
-            }
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        } catch (error) {
-          console.error("Error in checkPromise:", error);
-          resolve(false);
-        }
-      });
-
-      // Race between the check operation and timeout
-      try {
-        return await Promise.race([checkPromise, timeoutPromise]);
-      } catch (timeoutError) {
-        console.error("Checking for existing CV timed out:", timeoutError);
-        setCheckFailed(true);
+      const existingPdfUrl = await checkExistingCV(user, cvName);
+      
+      if (existingPdfUrl) {
+        setPdfUrl(existingPdfUrl);
         if (showToast) {
           toast({
-            title: "Recherche expirée",
-            description: "La recherche du CV existant a pris trop de temps",
-            variant: "destructive",
+            title: "CV trouvé",
+            description: "Le CV existe déjà et a été chargé",
           });
         }
+        console.log("CV found, URL set:", existingPdfUrl);
+        return true;
+      } else {
+        console.log("No existing CV found");
+        setCheckFailed(true);
         return false;
       }
     } catch (error) {

@@ -46,7 +46,8 @@ export function useResumeForm() {
     isChecking,
     pdfUrl, 
     generateCV,
-    checkExistingCVAndDisplay
+    checkExistingCVAndDisplay,
+    checkFailed: generationCheckFailed
   } = useCVGeneration();
   
   // Get initial CV name from URL if present
@@ -82,12 +83,26 @@ export function useResumeForm() {
   
   // Function to retry checking if the first attempt failed
   const retryCheckForExistingCV = useCallback(() => {
-    if (cvName && checkFailed) {
+    if (cvName) {
       setHasCheckedForExistingCV(false);
       setCheckFailed(false);
-      // The check will be triggered by the effect based on these state changes
+      checkForExistingCV(cvName);
     }
-  }, [cvName, checkFailed]);
+  }, [cvName, checkForExistingCV]);
+  
+  // Vérifier l'existence du CV lorsque le nom change
+  useEffect(() => {
+    if (cvName && !hasCheckedForExistingCV && !isCheckingInProgress) {
+      checkForExistingCV(cvName);
+    }
+  }, [cvName, checkForExistingCV, hasCheckedForExistingCV, isCheckingInProgress]);
+  
+  // Réinitialiser le drapeau de vérification lorsque le nom du CV change
+  useEffect(() => {
+    if (cvName) {
+      setHasCheckedForExistingCV(false);
+    }
+  }, [cvName]);
   
   // Fonction pour ouvrir le dialogue de confirmation
   const openConfirmDialog = async () => {

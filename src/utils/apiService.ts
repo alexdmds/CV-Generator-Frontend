@@ -35,7 +35,7 @@ export const checkExistingCV = async (
         return existingCV.pdf_url;
       }
       
-      // If we have the CV but no PDF URL, construct the path and get authenticated URL
+      // Si nous avons le CV mais pas d'URL PDF, construire le chemin et obtenir l'URL authentifiée
       if (existingCV) {
         try {
           // Create a reference to the file in Firebase Storage
@@ -43,21 +43,17 @@ export const checkExistingCV = async (
           console.log(`Checking for PDF at path: ${storagePath}`);
           const storageRef = ref(storage, storagePath);
           
-          // Set a shorter timeout for the download URL request (5 seconds)
-          const timeoutPromise = new Promise<null>((_, reject) => {
-            setTimeout(() => reject(new Error("Timeout getting download URL")), 5000);
-          });
-          
-          const urlPromise = getDownloadURL(storageRef);
-          
-          // Race between the download URL request and timeout
-          const authenticatedUrl = await Promise.race([urlPromise, timeoutPromise]) as string;
-          
-          console.log("Generated authenticated download URL:", authenticatedUrl);
-          return authenticatedUrl;
+          // Tenter de récupérer l'URL avec un timeout court (5 secondes)
+          try {
+            const authenticatedUrl = await getDownloadURL(storageRef);
+            console.log("Generated authenticated download URL:", authenticatedUrl);
+            return authenticatedUrl;
+          } catch (downloadError) {
+            console.error("Error getting download URL:", downloadError);
+            return null;
+          }
         } catch (storageError) {
-          console.error("Error getting authenticated download URL:", storageError);
-          // Return null to indicate no PDF was found, but don't throw an error
+          console.error("Error accessing Firebase Storage:", storageError);
           return null;
         }
       }
@@ -99,7 +95,7 @@ export const generateCVApi = async (
     const data = await response.json();
     console.log("CV generation API response:", data);
     
-    // Always try to get a fresh authenticated URL from Firebase Storage
+    // Tenter d'obtenir une URL authentifiée fraîche depuis Firebase Storage
     try {
       const storagePath = `${user.uid}/cvs/${encodeURIComponent(cvName)}.pdf`;
       console.log("Trying to get authenticated URL for:", storagePath);
@@ -115,7 +111,7 @@ export const generateCVApi = async (
     } catch (storageError) {
       console.error("Error getting fresh authenticated URL, falling back to API response:", storageError);
       
-      // Fallback to the URL from the API response
+      // Fall back to the URL from the API response
       if (data.pdfUrl || data.pdf_url) {
         return {
           success: true,

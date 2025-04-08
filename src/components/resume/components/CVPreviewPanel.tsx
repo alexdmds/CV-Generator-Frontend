@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface CVPreviewPanelProps {
   isGenerating: boolean;
@@ -23,18 +24,35 @@ export const CVPreviewPanel = ({
 }: CVPreviewPanelProps) => {
   const [pdfLoadError, setPdfLoadError] = useState(false);
   const [useDirectView, setUseDirectView] = useState(false);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
   
   // Réinitialiser l'état d'erreur lorsque l'URL du PDF change
   useEffect(() => {
     if (pdfUrl) {
       setPdfLoadError(false);
       setUseDirectView(false);
+      setPdfLoaded(false);
+      
+      // Check if the URL is accessible
+      const img = new Image();
+      img.onload = () => setPdfLoaded(true);
+      img.onerror = () => {
+        console.log("Failed to preload PDF URL:", pdfUrl);
+        // Don't set error yet, let the iframe try
+      };
+      img.src = pdfUrl;
     }
   }, [pdfUrl]);
 
   const handlePdfError = () => {
     console.error("Failed to load PDF in iframe, setting error state");
     setPdfLoadError(true);
+  };
+  
+  const handlePdfLoad = () => {
+    console.log("PDF loaded successfully in iframe");
+    setPdfLoaded(true);
+    setPdfLoadError(false);
   };
   
   const handleRetry = () => {
@@ -52,6 +70,17 @@ export const CVPreviewPanel = ({
   
   const handleUseDirectView = () => {
     setUseDirectView(true);
+  };
+
+  const handleDownload = () => {
+    if (pdfUrl) {
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.setAttribute('download', 'cv.pdf');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -93,7 +122,7 @@ export const CVPreviewPanel = ({
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => window.location.href = pdfUrl}
+                    onClick={handleDownload}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger
@@ -102,12 +131,33 @@ export const CVPreviewPanel = ({
               </div>
             ) : (
               <>
-                <iframe 
-                  src={pdfUrl}
-                  className="w-full h-[500px] border border-gray-300"
-                  title="CV généré"
-                  onError={handlePdfError}
-                />
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <div className="relative">
+                      <iframe 
+                        src={pdfUrl}
+                        className="w-full h-[500px] border border-gray-300"
+                        title="CV généré"
+                        onError={handlePdfError}
+                        onLoad={handlePdfLoad}
+                        sandbox="allow-same-origin allow-scripts allow-forms"
+                      />
+                      <div className="absolute inset-0 bg-transparent" />
+                    </div>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[85%] sm:w-[75%] md:w-[65%] lg:w-[55%] xl:w-[45%]">
+                    <div className="h-full flex flex-col">
+                      <h2 className="text-xl font-bold mb-2">Aperçu en plein écran</h2>
+                      <div className="flex-1 overflow-hidden">
+                        <iframe 
+                          src={pdfUrl}
+                          className="w-full h-full border border-gray-300"
+                          title="CV généré plein écran"
+                        />
+                      </div>
+                    </div>
+                  </SheetContent>
+                </Sheet>
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
                   <Button 
                     variant="default" 
@@ -118,7 +168,7 @@ export const CVPreviewPanel = ({
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => window.location.href = pdfUrl}
+                    onClick={handleDownload}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger le PDF
@@ -153,7 +203,7 @@ export const CVPreviewPanel = ({
                   </Button>
                 )}
                 
-                {(checkFailed || pdfLoadError) && (
+                {(checkFailed || pdfLoadError) && pdfUrl && (
                   <Button 
                     variant="outline" 
                     onClick={handleRetry}
@@ -162,6 +212,18 @@ export const CVPreviewPanel = ({
                   >
                     <RefreshCcw className="w-4 h-4 mr-2" />
                     Vérifier à nouveau
+                  </Button>
+                )}
+                
+                {pdfUrl && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDownload}
+                    className="flex items-center"
+                    size="sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger
                   </Button>
                 )}
               </div>

@@ -18,8 +18,8 @@ export const BackToResumesButton = ({
     if (onClick) {
       onClick();
     } else {
-      // Assurer que la navigation se fait correctement vers /resumes
       try {
+        console.log("Navigating back to /resumes");
         navigate("/resumes");
       } catch (error) {
         console.error("Navigation error:", error);

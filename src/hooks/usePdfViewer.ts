@@ -10,42 +10,29 @@ export function usePdfViewer() {
   const [loadFailed, setLoadFailed] = useState(false);
   const { toast } = useToast();
 
-  // Vérifier si l'URL est directement accessible
+  // Surveiller les changements d'URL et vérifier si le PDF est accessible
   useEffect(() => {
     if (pdfUrl) {
-      // Vérifier si l'URL est accessible via une requête HEAD
-      const checkPdfAccessibility = async () => {
-        try {
-          const response = await fetch(pdfUrl, { method: 'HEAD' });
-          if (!response.ok) {
-            console.error(`PDF accessibility check failed: ${response.status} ${response.statusText}`);
-            setLoadFailed(true);
-          } else {
-            setLoadFailed(false);
-            console.log("PDF accessibility check passed");
-          }
-        } catch (error) {
-          console.error("Error checking PDF accessibility:", error);
-          // Ne pas marquer comme échoué pour permettre à l'iframe de tenter le chargement
-        }
-      };
+      console.log("PDF URL updated:", pdfUrl);
       
-      checkPdfAccessibility();
+      // Pas de vérification immédiate par fetch car les CORS peuvent bloquer
+      // Mais on réinitialise l'état d'erreur pour donner une nouvelle chance
+      setLoadFailed(false);
     }
   }, [pdfUrl]);
 
-  // Get direct URL to a PDF in Firebase Storage with double encoding for special characters
+  // Récupère l'URL directe d'un PDF dans Firebase Storage en encodant correctement le nom
   const getImmediatePdfUrl = (userId: string, cvName: string): string => {
     return getDirectPdfUrl(userId, cvName);
   };
 
-  // Set a PDF URL directly without verification
+  // Définir une URL de PDF directement
   const loadPdf = (url: string) => {
     setPdfUrl(url);
     setLoadFailed(false);
   };
 
-  // Load a PDF for a known CV
+  // Charger un PDF pour un CV connu
   const loadCVPdf = (cvName: string): boolean => {
     if (!cvName) return false;
     
@@ -60,10 +47,10 @@ export function usePdfViewer() {
         return false;
       }
       
+      // URL construite avec encodage double pour gérer les caractères spéciaux
       const directUrl = getImmediatePdfUrl(user.uid, cvName);
       console.log(`Loading PDF at URL: ${directUrl}`);
       setPdfUrl(directUrl);
-      setLoadFailed(false);
       
       return true;
     } catch (error) {
@@ -75,7 +62,7 @@ export function usePdfViewer() {
     }
   };
 
-  // Mark PDF loading as failed
+  // Marquer le chargement du PDF comme échoué
   const handleLoadError = () => {
     console.error("Failed to load PDF in viewer");
     setLoadFailed(true);
@@ -87,7 +74,7 @@ export function usePdfViewer() {
     });
   };
 
-  // Reset the loading state to try again
+  // Réinitialiser l'état de chargement pour réessayer
   const resetLoading = () => {
     setLoadFailed(false);
     setIsLoading(false);

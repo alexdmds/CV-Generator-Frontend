@@ -11,14 +11,15 @@ interface GenerateCVResponse {
   pdfPath?: string;
 }
 
-// Méthode pour obtenir l'URL directe avec double encodage des caractères spéciaux
+// Méthode pour obtenir l'URL directe avec encodage approprié des caractères spéciaux
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
-  // Encodage des caractères spéciaux pour l'URL
+  // Encodage correct des caractères spéciaux pour l'URL
   const encodedName = encodeURIComponent(cvName);
   
   console.log(`Original name: "${cvName}", Encoded name: "${encodedName}"`);
   
   // URL directe vers le PDF dans Firebase Storage
+  // On utilise l'URL publique directe au lieu de celle qui nécessite un token Firebase
   const publicUrl = `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
   
   return publicUrl;
@@ -33,24 +34,12 @@ export const checkExistingCV = async (
   cvName: string
 ): Promise<string | null> => {
   try {
-    // Essayer directement l'URL publique avec encodage correct
+    // Construction de l'URL publique avec encodage correct
     const directUrl = getDirectPdfUrl(user.uid, cvName);
     console.log("Checking CV existence with URL:", directUrl);
     
-    // Tenter une requête HEAD pour vérifier si le fichier existe
-    try {
-      const response = await fetch(directUrl, { method: 'HEAD', cache: 'no-cache' });
-      if (response.ok) {
-        console.log("CV found via HEAD request");
-        return directUrl;
-      }
-      console.warn("CV not found via HEAD request:", response.status, response.statusText);
-    } catch (error) {
-      console.warn("HEAD request failed, continuing anyway:", error);
-    }
-    
-    // Renvoyer l'URL de toute façon, même si le HEAD a échoué 
-    // (certains serveurs bloquent HEAD mais autorisent GET)
+    // On retourne directement l'URL sans vérification préalable
+    // car les requêtes CORS peuvent échouer mais le PDF est accessible
     return directUrl;
     
   } catch (error) {
@@ -61,7 +50,7 @@ export const checkExistingCV = async (
 
 /**
  * Récupère l'URL d'un PDF dans Firebase Storage
- * Version non-bloquante limitée à une seule tentative rapide
+ * Version non-bloquante retournant immédiatement l'URL construite
  */
 export const getStoragePdfUrl = async (userId: string, cvName: string): Promise<string | null> => {
   // Renvoyer directement l'URL construite sans vérification

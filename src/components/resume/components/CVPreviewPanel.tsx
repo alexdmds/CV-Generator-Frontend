@@ -3,8 +3,9 @@ import { FileText, Loader2, FileX, RefreshCcw, Download, ArrowUpRight, Eye } fro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/use-toast";
 
 interface CVPreviewPanelProps {
   isGenerating: boolean;
@@ -25,6 +26,8 @@ export const CVPreviewPanel = ({
   const [useDirectView, setUseDirectView] = useState(false);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [iframeKey, setIframeKey] = useState(Date.now()); // Clé unique pour forcer le rechargement de l'iframe
+  const { toast } = useToast();
   
   // Réinitialiser l'état d'erreur lorsque l'URL du PDF change
   useEffect(() => {
@@ -34,76 +37,125 @@ export const CVPreviewPanel = ({
       setUseDirectView(false);
       setPdfLoaded(false);
       setIsRetrying(false);
-      
-      // Essayer de précharger l'URL pour vérifier si elle est accessible
-      const precheck = async () => {
-        try {
-          console.log("Prechecking PDF URL...");
-          await fetch(pdfUrl, { 
-            method: 'HEAD', 
-            mode: 'no-cors',
-            cache: 'no-cache' 
-          });
-          console.log("PDF URL precheck success");
-          setPdfLoaded(true);
-        } catch (error) {
-          console.warn("PDF URL precheck warning:", error);
-          // On ne marque pas comme erreur pour laisser l'iframe essayer
-        }
-      };
-      
-      precheck();
+      // Générer une nouvelle clé pour forcer le rechargement de l'iframe
+      setIframeKey(Date.now());
     }
   }, [pdfUrl]);
 
-  const handlePdfError = () => {
-    console.error("Failed to load PDF in iframe, setting error state");
+  // Précharger le PDF pour vérifier l'accessibilité
+  useEffect(() => {
+    if (!pdfUrl) return;
+    
+    const preloadPdf = async () => {
+      try {
+        // Tenter de précharger avec fetch pour vérifier l'accessibilité
+        console.log("Preloading PDF URL:", pdfUrl);
+        const response = await fetch(pdfUrl, { 
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-cache'
+        });
+        console.log("PDF URL preload successful");
+      } catch (error) {
+        // Une erreur ici ne signifie pas nécessairement que le PDF est inaccessible
+        console.warn("PDF URL preload warning:", error);
+      }
+    };
+    
+    preloadPdf();
+  }, [pdfUrl]);
+
+  const handlePdfError = useCallback(() => {
+    console.error("Failed to load PDF in iframe");
     setPdfLoadError(true);
-  };
+    if (!useDirectView) {
+      toast({
+        title: "Problème d'affichage",
+        description: "L'aperçu du PDF ne peut pas être affiché. Utilisez les options alternatives.",
+        variant: "destructive"
+      });
+    }
+  }, [useDirectView, toast]);
   
-  const handlePdfLoad = () => {
+  const handlePdfLoad = useCallback(() => {
     console.log("PDF loaded successfully in iframe");
     setPdfLoaded(true);
     setPdfLoadError(false);
-  };
+  }, []);
   
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     console.log("Retrying CV loading...");
     setPdfLoadError(false);
     setUseDirectView(false);
     setIsRetrying(true);
     retryCheckForExistingCV();
     
-    // Forcer un nouveau chargement de l'iframe
+    // Générer une nouvelle clé pour forcer le rechargement de l'iframe
+    setIframeKey(Date.now());
+    
+    // Réinitialiser le statut après un délai
     setTimeout(() => {
       setIsRetrying(false);
-    }, 500);
-  };
+    }, 1000);
+  }, [retryCheckForExistingCV]);
   
-  const handleOpenInNewTab = () => {
+  const handleOpenInNewTab = useCallback(() => {
     if (pdfUrl) {
       console.log("Opening PDF in new tab:", pdfUrl);
       window.open(pdfUrl, '_blank', 'noopener,noreferrer');
     }
-  };
+  }, [pdfUrl]);
   
-  const handleUseDirectView = () => {
+  const handleUseDirectView = useCallback(() => {
     console.log("Switching to direct view mode");
     setUseDirectView(true);
-  };
+  }, []);
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     if (pdfUrl) {
       console.log("Downloading PDF:", pdfUrl);
-      // Téléchargement direct via un lien temporaire
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.setAttribute('download', 'cv.pdf');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Créer une requête fetch pour le téléchargement
+      fetch(pdfUrl)
+        .then(response => response.blob())
+        .then(blob => {
+          // Créer un objet URL pour le blob
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          
+          // Extraire le nom du fichier de l'URL ou utiliser un nom par défaut
+          const urlParts = pdfUrl.split('/');
+          const fileName = urlParts[urlParts.length - 1].split('?')[0] || 'cv.pdf';
+          link.setAttribute('download', decodeURIComponent(fileName));
+          
+          // Ajouter le lien au document, cliquer dessus, puis le supprimer
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Libérer l'URL de l'objet
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+          }, 100);
+        })
+        .catch(err => {
+          console.error("Download error:", err);
+          // Fallback vers la méthode simple si la méthode fetch échoue
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.setAttribute('download', 'cv.pdf');
+          link.setAttribute('target', '_blank');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Téléchargement alternatif",
+            description: "Utilisation d'une méthode alternative de téléchargement.",
+          });
+        });
     }
-  };
+  }, [pdfUrl, toast]);
 
   return (
     <Card>
@@ -125,10 +177,66 @@ export const CVPreviewPanel = ({
               message="Génération du CV en cours..."
             />
           </div>
-        ) : pdfUrl && !pdfLoadError ? (
+        ) : pdfUrl && !useDirectView && !isRetrying ? (
           <div className="rounded-md overflow-hidden">
-            {useDirectView ? (
-              <div className="p-4 text-center">
+            <div className="relative">
+              <iframe 
+                key={`pdf-iframe-${iframeKey}`}
+                src={pdfUrl}
+                className="w-full h-[500px] border border-gray-300 rounded"
+                title="CV généré"
+                onError={handlePdfError}
+                onLoad={handlePdfLoad}
+                sandbox="allow-same-origin allow-scripts allow-forms"
+              />
+              
+              {!pdfLoaded && !pdfLoadError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-70">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Chargement du PDF...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 flex flex-wrap gap-2 justify-center">
+              <Button 
+                variant="default" 
+                onClick={handleOpenInNewTab}
+              >
+                <ArrowUpRight className="w-4 h-4 mr-2" />
+                Ouvrir dans un nouvel onglet
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleDownload}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Télécharger le PDF
+              </Button>
+              {pdfLoadError && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleUseDirectView}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Vue alternative
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : pdfUrl && (useDirectView || isRetrying) ? (
+          <div className="p-4 text-center">
+            {isRetrying ? (
+              <div className="w-full h-[300px] flex items-center justify-center">
+                <div className="text-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-gray-600">Rechargement en cours...</p>
+                </div>
+              </div>
+            ) : (
+              <>
                 <Alert className="mb-4">
                   <AlertDescription>
                     L'aperçu intégré n'est pas disponible. Utilisez les boutons ci-dessous pour visualiser ou télécharger votre CV.
@@ -149,42 +257,12 @@ export const CVPreviewPanel = ({
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger
                   </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="relative">
-                  {!isRetrying && (
-                    <iframe 
-                      key={`pdf-iframe-${pdfUrl}`}
-                      src={pdfUrl}
-                      className="w-full h-[500px] border border-gray-300"
-                      title="CV généré"
-                      onError={handlePdfError}
-                      onLoad={handlePdfLoad}
-                      sandbox="allow-same-origin allow-scripts allow-forms"
-                    />
-                  )}
-                  {isRetrying && (
-                    <div className="w-full h-[500px] flex items-center justify-center bg-gray-100">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                  <Button 
-                    variant="default" 
-                    onClick={handleOpenInNewTab}
-                  >
-                    <ArrowUpRight className="w-4 h-4 mr-2" />
-                    Ouvrir dans un nouvel onglet
-                  </Button>
                   <Button 
                     variant="outline" 
-                    onClick={handleDownload}
+                    onClick={handleRetry}
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Télécharger le PDF
+                    <RefreshCcw className="w-4 h-4 mr-2" />
+                    Réessayer l'aperçu
                   </Button>
                 </div>
               </>
@@ -195,60 +273,50 @@ export const CVPreviewPanel = ({
             <div className="mb-4 flex flex-col items-center justify-center">
               <FileX className="w-16 h-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900">
-                {pdfLoadError ? "Erreur de chargement du PDF" : "CV pas encore généré"}
+                {checkFailed ? "Problème d'accès au PDF" : "CV pas encore généré"}
               </h3>
               <p className="text-gray-500 mt-2 mb-4">
-                {pdfLoadError 
-                  ? "Impossible d'afficher le PDF dans l'aperçu. Essayez de l'ouvrir directement."
-                  : "Aucun CV n'a encore été généré avec ce nom."}
+                {checkFailed 
+                  ? "Impossible d'afficher le PDF. Le fichier existe mais n'est pas accessible dans l'aperçu."
+                  : "Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible."}
               </p>
               
               <div className="flex flex-wrap gap-2 mt-2">
-                {pdfLoadError && pdfUrl && (
-                  <Button 
-                    variant="default" 
-                    onClick={handleUseDirectView}
-                    className="flex items-center"
-                    size="sm"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Utiliser la vue directe
-                  </Button>
-                )}
-                
-                {(checkFailed || pdfLoadError) && pdfUrl && (
-                  <Button 
-                    variant="outline" 
-                    onClick={handleRetry}
-                    className="flex items-center"
-                    size="sm"
-                  >
-                    <RefreshCcw className="w-4 h-4 mr-2" />
-                    Vérifier à nouveau
-                  </Button>
-                )}
-                
-                {pdfUrl && (
+                {checkFailed && (
                   <>
                     <Button 
-                      variant="outline" 
-                      onClick={handleOpenInNewTab}
+                      variant="default" 
+                      onClick={handleRetry}
                       className="flex items-center"
                       size="sm"
                     >
-                      <ArrowUpRight className="w-4 h-4 mr-2" />
-                      Ouvrir dans un nouvel onglet
+                      <RefreshCcw className="w-4 h-4 mr-2" />
+                      Réessayer
                     </Button>
                     
-                    <Button 
-                      variant="outline" 
-                      onClick={handleDownload}
-                      className="flex items-center"
-                      size="sm"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Télécharger
-                    </Button>
+                    {pdfUrl && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleOpenInNewTab}
+                          className="flex items-center"
+                          size="sm"
+                        >
+                          <ArrowUpRight className="w-4 h-4 mr-2" />
+                          Ouvrir dans un nouvel onglet
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          onClick={handleDownload}
+                          className="flex items-center"
+                          size="sm"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Télécharger
+                        </Button>
+                      </>
+                    )}
                   </>
                 )}
               </div>

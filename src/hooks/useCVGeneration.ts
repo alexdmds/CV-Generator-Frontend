@@ -11,6 +11,7 @@ export function useCVGeneration() {
     isLoading: isPdfLoading,
     loadFailed,
     getImmediatePdfUrl,
+    getDownloadPdfUrl,
     loadCVPdf,
     handleLoadError,
     resetLoading,
@@ -47,6 +48,7 @@ export function useCVGeneration() {
     checkExistingCVAndDisplay,
     loadKnownPdf: loadCVPdf,
     getImmediatePdfUrl,
+    getDownloadPdfUrl,
     handlePdfLoadError: handleLoadError,
     retryLoadingCV
   };

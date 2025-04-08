@@ -26,7 +26,8 @@ export function useCVInitialization() {
   const { 
     checkExistingCVAndDisplay, 
     getImmediatePdfUrl, 
-    setPdfUrl 
+    setPdfUrl,
+    getDownloadPdfUrl 
   } = useCVGeneration();
   
   // Get initial CV name from URL if present
@@ -46,7 +47,7 @@ export function useCVInitialization() {
     }
   }, [searchParams, params, setCvName]);
   
-  // Vérification non bloquante du CV existant
+  // Vérification non bloquante du CV existant avec méthode améliorée
   const checkForExistingCV = useCallback(async (name: string) => {
     if (!name || isCheckingInProgress) {
       return;
@@ -71,6 +72,17 @@ export function useCVInitialization() {
       console.log("Setting direct PDF URL:", directUrl);
       setPdfUrl(directUrl);
       
+      // Essayer d'obtenir une URL de téléchargement plus fiable en arrière-plan
+      try {
+        const downloadUrl = await getDownloadPdfUrl(user.uid, name);
+        if (downloadUrl) {
+          console.log("Setting download URL from background check:", downloadUrl);
+          setPdfUrl(downloadUrl);
+        }
+      } catch (error) {
+        console.warn("Error getting download URL in background check:", error);
+      }
+      
       // Vérifier en arrière-plan sans bloquer l'interface
       setTimeout(async () => {
         try {
@@ -89,7 +101,7 @@ export function useCVInitialization() {
       setCheckFailed(true);
       setIsCheckingInProgress(false);
     }
-  }, [checkExistingCVAndDisplay, getImmediatePdfUrl, setPdfUrl, isCheckingInProgress]);
+  }, [checkExistingCVAndDisplay, getImmediatePdfUrl, setPdfUrl, getDownloadPdfUrl, isCheckingInProgress]);
   
   // Function to retry checking if the first attempt failed
   const retryCheckForExistingCV = useCallback(() => {

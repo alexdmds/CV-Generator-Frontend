@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
@@ -13,11 +13,12 @@ export function useCVApiService() {
   const navigate = useNavigate();
   const { 
     setPdfUrl,
-    setLoadFailed 
+    setLoadFailed,
+    getDownloadPdfUrl,
   } = usePdfViewer();
 
   // Check if a CV exists on Firebase Storage and set up the PDF URL
-  const checkExistingCVAndDisplay = async (cvName: string, showToast = true) => {
+  const checkExistingCVAndDisplay = useCallback(async (cvName: string, showToast = true) => {
     if (!cvName) return false;
     
     try {
@@ -37,15 +38,29 @@ export function useCVApiService() {
       setLoadFailed(false);
       console.log(`Checking for existing CV: ${cvName}`);
 
-      // Générer l'URL immédiatement sans attendre
+      // Définir l'URL directe immédiatement pour un chargement rapide
       const immediateUrl = getDirectPdfUrl(user.uid, cvName);
-      console.log("Setting PDF URL:", immediateUrl);
+      console.log("Setting immediate PDF URL:", immediateUrl);
       setPdfUrl(immediateUrl);
+      
+      // Puis tenter d'obtenir une URL de téléchargement plus fiable
+      try {
+        const downloadUrl = await getDownloadPdfUrl(user.uid, cvName);
+        if (downloadUrl) {
+          console.log("Setting download URL:", downloadUrl);
+          setPdfUrl(downloadUrl);
+        }
+      } catch (error) {
+        console.warn("Error getting download URL, continuing with direct URL:", error);
+      }
       
       // En arrière-plan, vérifier si le CV existe réellement
       const pdfUrl = await checkExistingCV(user, cvName);
       
       if (pdfUrl) {
+        console.log("CV found with URL:", pdfUrl);
+        setPdfUrl(pdfUrl);
+        
         if (showToast) {
           toast({
             title: "CV trouvé",
@@ -54,6 +69,7 @@ export function useCVApiService() {
         }
         return true;
       } else {
+        console.log("CV not found or inaccessible");
         setLoadFailed(true);
         if (showToast) {
           toast({
@@ -78,10 +94,10 @@ export function useCVApiService() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [getDownloadPdfUrl, navigate, setPdfUrl, setLoadFailed, toast]);
 
   // Call the CV generation API
-  const generateCV = async (cvName: string) => {
+  const generateCV = useCallback(async (cvName: string) => {
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -123,7 +139,7 @@ export function useCVApiService() {
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [navigate, setPdfUrl, setLoadFailed, toast]);
 
   return {
     isGenerating,

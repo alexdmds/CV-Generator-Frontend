@@ -11,21 +11,21 @@ interface GenerateCVResponse {
   pdfPath?: string;
 }
 
-// Méthode pour obtenir l'URL directe avec encodage approprié des caractères spéciaux
+// Méthode plus robuste pour obtenir l'URL Firebase Storage
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
-  // Double encodage pour s'assurer que les caractères spéciaux sont bien gérés
+  // Encodage correct pour les URLs Firebase Storage
   const encodedUserId = encodeURIComponent(userId);
-  const encodedName = encodeURIComponent(cvName);
+  const encodedCvName = encodeURIComponent(cvName);
   
-  console.log(`Generating URL for CV: userId=${userId}, cvName="${cvName}", encodedName="${encodedName}"`);
+  console.log(`Generating URL for CV: userId=${userId}, cvName="${cvName}", encodedName="${encodedCvName}"`);
   
-  // Format d'URL qui fonctionne directement avec Firebase Storage
-  return `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${encodedUserId}%2Fcvs%2F${encodedName}.pdf?alt=media`;
+  // URL au format Firebase Storage compatible CORS
+  return `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${encodedUserId}%2Fcvs%2F${encodedCvName}.pdf?alt=media&token=public`;
 };
 
 /**
  * Vérifie si un CV avec le nom donné existe déjà pour l'utilisateur
- * Version non-bloquante qui renvoie une promesse
+ * Utilise getDownloadURL pour une vérification plus fiable
  */
 export const checkExistingCV = async (
   user: User,
@@ -34,12 +34,19 @@ export const checkExistingCV = async (
   try {
     console.log(`Checking if CV exists: ${cvName}`);
     
-    // Construction de l'URL publique avec encodage correct
-    const directUrl = getDirectPdfUrl(user.uid, cvName);
-    console.log("Generated URL:", directUrl);
+    // Créer une référence au fichier dans Firebase Storage
+    const fileRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
     
-    // On retourne directement l'URL sans vérification préalable
-    return directUrl;
+    try {
+      // Tenter d'obtenir l'URL réelle via getDownloadURL
+      const url = await getDownloadURL(fileRef);
+      console.log("CV exists, download URL:", url);
+      return url;
+    } catch (error) {
+      // Si getDownloadURL échoue, retourner l'URL directe comme fallback
+      console.warn("getDownloadURL failed, using direct URL as fallback:", error);
+      return getDirectPdfUrl(user.uid, cvName);
+    }
   } catch (error) {
     console.error("Error checking for existing CV:", error);
     return null;
@@ -48,11 +55,25 @@ export const checkExistingCV = async (
 
 /**
  * Récupère l'URL d'un PDF dans Firebase Storage
- * Version non-bloquante retournant immédiatement l'URL construite
  */
 export const getStoragePdfUrl = async (userId: string, cvName: string): Promise<string | null> => {
-  // Renvoyer directement l'URL construite sans vérification
-  return getDirectPdfUrl(userId, cvName);
+  try {
+    // Créer une référence au fichier
+    const fileRef = ref(storage, `${userId}/cvs/${cvName}.pdf`);
+    
+    try {
+      // Tenter d'obtenir l'URL via getDownloadURL
+      const url = await getDownloadURL(fileRef);
+      return url;
+    } catch (error) {
+      // Fallback vers URL directe
+      console.warn("getDownloadURL failed, using direct URL:", error);
+      return getDirectPdfUrl(userId, cvName);
+    }
+  } catch (error) {
+    console.error("Error getting storage PDF URL:", error);
+    return getDirectPdfUrl(userId, cvName);
+  }
 };
 
 /**
@@ -83,13 +104,23 @@ export const generateCVApi = async (
     const data = await response.json();
     console.log("CV generation API response:", data);
     
-    // Utiliser directement l'URL construite sans vérification
-    const pdfUrl = getDirectPdfUrl(user.uid, cvName);
-    
-    return {
-      success: true,
-      pdfPath: pdfUrl
-    };
+    // Obtenir l'URL du PDF généré
+    try {
+      const fileRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
+      const pdfUrl = await getDownloadURL(fileRef);
+      return {
+        success: true,
+        pdfPath: pdfUrl
+      };
+    } catch (error) {
+      // Fallback vers URL directe
+      console.warn("getDownloadURL failed after generation, using direct URL:", error);
+      const directUrl = getDirectPdfUrl(user.uid, cvName);
+      return {
+        success: true,
+        pdfPath: directUrl
+      };
+    }
   } catch (error) {
     console.error("Error calling CV generation API:", error);
     return {

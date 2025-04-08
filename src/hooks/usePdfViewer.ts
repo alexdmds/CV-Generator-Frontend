@@ -1,8 +1,10 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { auth } from "@/components/auth/firebase-config";
-import { getDirectPdfUrl } from "@/utils/apiService";
+import { getDirectPdfUrl, getStoragePdfUrl } from "@/utils/apiService";
 import { useToast } from "@/components/ui/use-toast";
+import { ref, getDownloadURL } from "firebase/storage";
+import { storage } from "@/components/auth/firebase-config";
 
 export function usePdfViewer() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -18,40 +20,49 @@ export function usePdfViewer() {
       // Réinitialiser l'état d'erreur quand l'URL change
       setLoadFailed(false);
       
-      // Tester l'accessibilité de l'URL en arrière-plan sans bloquer l'interface
-      const testAccessibility = async () => {
-        try {
-          // Utiliser fetch avec no-cors pour éviter les problèmes CORS
-          const response = await fetch(pdfUrl, { 
-            method: 'HEAD',
-            mode: 'no-cors',
-            cache: 'no-cache'
-          });
-          console.log("PDF URL seems accessible");
-        } catch (error) {
-          // Ne pas marquer comme échoué ici, laisser l'iframe essayer
-          console.warn("PDF URL might not be directly accessible:", error);
+      // Vérifier si l'URL contient un token valide
+      if (!pdfUrl.includes('token=')) {
+        console.log("Adding token to URL for better accessibility");
+        const newUrl = pdfUrl.includes('?') 
+          ? `${pdfUrl}&token=public` 
+          : `${pdfUrl}?token=public`;
+        
+        // Ne pas mettre à jour l'URL si elle contient déjà un token
+        if (pdfUrl !== newUrl) {
+          console.log("Updating URL with token:", newUrl);
+          setPdfUrl(newUrl);
         }
-      };
-      
-      testAccessibility();
+      }
     }
   }, [pdfUrl]);
 
   // Récupère l'URL directe d'un PDF dans Firebase Storage
-  const getImmediatePdfUrl = (userId: string, cvName: string): string => {
+  const getImmediatePdfUrl = useCallback((userId: string, cvName: string): string => {
     return getDirectPdfUrl(userId, cvName);
-  };
+  }, []);
+
+  // Obtenir l'URL de téléchargement via Firebase Storage
+  const getDownloadPdfUrl = useCallback(async (userId: string, cvName: string): Promise<string | null> => {
+    try {
+      const fileRef = ref(storage, `${userId}/cvs/${cvName}.pdf`);
+      const url = await getDownloadURL(fileRef);
+      console.log("Got download URL:", url);
+      return url;
+    } catch (error) {
+      console.warn("Failed to get download URL, falling back to direct URL:", error);
+      return getDirectPdfUrl(userId, cvName);
+    }
+  }, []);
 
   // Définir une URL de PDF directement
-  const loadPdf = (url: string) => {
+  const loadPdf = useCallback((url: string) => {
     console.log("Loading PDF directly with URL:", url);
     setPdfUrl(url);
     setLoadFailed(false);
-  };
+  }, []);
 
   // Charger un PDF pour un CV connu
-  const loadCVPdf = (cvName: string): boolean => {
+  const loadCVPdf = useCallback((cvName: string): boolean => {
     if (!cvName) return false;
     
     try {
@@ -65,23 +76,47 @@ export function usePdfViewer() {
         return false;
       }
       
-      // URL construite avec encodage approprié
-      const directUrl = getImmediatePdfUrl(user.uid, cvName);
-      console.log(`Loading PDF for CV "${cvName}" at URL: ${directUrl}`);
+      // Essayer d'obtenir une URL de téléchargement fiable
+      const attemptLoadWithDownloadUrl = async () => {
+        try {
+          const downloadUrl = await getDownloadPdfUrl(user.uid, cvName);
+          if (downloadUrl) {
+            console.log("Setting download URL:", downloadUrl);
+            setPdfUrl(downloadUrl);
+            return true;
+          }
+          return false;
+        } catch (error) {
+          console.error("Error getting download URL:", error);
+          // Fallback vers URL directe
+          const directUrl = getDirectPdfUrl(user.uid, cvName);
+          console.log("Falling back to direct URL:", directUrl);
+          setPdfUrl(directUrl);
+          return true;
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      // Définir d'abord l'URL directe pour un chargement rapide
+      const directUrl = getDirectPdfUrl(user.uid, cvName);
+      console.log(`Loading PDF for CV "${cvName}" with direct URL: ${directUrl}`);
       setPdfUrl(directUrl);
+      
+      // Puis tenter d'obtenir une URL de téléchargement en arrière-plan
+      attemptLoadWithDownloadUrl();
       
       return true;
     } catch (error) {
       console.error("Error loading PDF:", error);
       setLoadFailed(true);
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
-  };
+  }, [getDownloadPdfUrl]);
 
   // Marquer le chargement du PDF comme échoué
-  const handleLoadError = () => {
+  const handleLoadError = useCallback(() => {
     console.error("Failed to load PDF in viewer");
     setLoadFailed(true);
     
@@ -90,13 +125,13 @@ export function usePdfViewer() {
       description: "Impossible de charger le PDF dans l'aperçu. Essayez de le télécharger directement.",
       variant: "destructive",
     });
-  };
+  }, [toast]);
 
   // Réinitialiser l'état de chargement pour réessayer
-  const resetLoading = () => {
+  const resetLoading = useCallback(() => {
     setLoadFailed(false);
     setIsLoading(false);
-  };
+  }, []);
 
   return {
     pdfUrl,
@@ -106,6 +141,7 @@ export function usePdfViewer() {
     loadFailed,
     setLoadFailed,
     getImmediatePdfUrl,
+    getDownloadPdfUrl,
     loadPdf,
     loadCVPdf,
     handleLoadError,

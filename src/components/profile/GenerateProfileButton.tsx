@@ -1,24 +1,23 @@
 
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
-import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface GenerateProfileButtonProps {
   isGenerating: boolean;
+  onClick: () => void;
 }
 
-export const GenerateProfileButton = ({ isGenerating }: GenerateProfileButtonProps) => {
+export const GenerateProfileButton = ({ isGenerating, onClick }: GenerateProfileButtonProps) => {
   return (
-    <AlertDialogTrigger asChild>
-      <Button
-        type="button"
-        className="w-full"
-        variant="default"
-        disabled={isGenerating}
-      >
-        <FileText className="mr-2" />
-        {isGenerating ? "Génération en cours..." : "Générer mon profil"}
-      </Button>
-    </AlertDialogTrigger>
+    <Button
+      type="button"
+      className="w-full"
+      variant="default"
+      disabled={isGenerating}
+      onClick={onClick}
+    >
+      <FileText className="mr-2" />
+      {isGenerating ? "Génération en cours..." : "Générer mon profil"}
+    </Button>
   );
 };

@@ -8,6 +8,7 @@ import { TokenCounter } from "./TokenCounter";
 import { useProfileGeneration } from "@/hooks/useProfileGeneration";
 import { GenerateProfileButton } from "./GenerateProfileButton";
 import { GenerateProfileDialog } from "./GenerateProfileDialog";
+import { useState } from "react";
 
 interface ProfileFormProps {
   isGenerating: boolean;
@@ -21,6 +22,11 @@ export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: Pr
     setConfirmOpen, 
     handleGenerateCV 
   } = useProfileGeneration(refreshTokens);
+
+  // Handler for the button click
+  const handleGenerateButtonClick = () => {
+    setConfirmOpen(true);
+  };
 
   return (
     <Card className="w-full max-w-2xl mx-auto animate-fadeIn">
@@ -39,7 +45,10 @@ export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: Pr
             onConfirm={handleGenerateCV}
           />
           
-          <GenerateProfileButton isGenerating={isGenerating} />
+          <GenerateProfileButton 
+            isGenerating={isGenerating} 
+            onClick={handleGenerateButtonClick}
+          />
         </div>
       </CardContent>
     </Card>

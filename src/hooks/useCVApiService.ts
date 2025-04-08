@@ -5,6 +5,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
 import { generateCVApi, checkExistingCV, getDirectPdfUrl } from "@/utils/apiService";
 import { usePdfViewer } from "./usePdfViewer";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/components/auth/firebase-config";
 
 export function useCVApiService() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -38,6 +40,33 @@ export function useCVApiService() {
       setLoadFailed(false);
       console.log(`Checking for existing CV: ${cvName}`);
 
+      // Vérifier si le CV existe dans Firestore d'abord
+      let cvExistsInFirestore = false;
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const cvs = userData.cvs || [];
+          
+          // Vérifier si un CV avec ce nom existe dans les données Firestore
+          const existingCV = cvs.find((cv: any) => cv.cv_name === cvName);
+          
+          if (existingCV) {
+            console.log("CV found in Firestore data");
+            cvExistsInFirestore = true;
+            
+            // Définir l'URL directe immédiatement
+            const directUrl = getDirectPdfUrl(user.uid, cvName);
+            console.log("Setting direct PDF URL from Firestore check:", directUrl);
+            setPdfUrl(directUrl);
+          }
+        }
+      } catch (firestoreError) {
+        console.warn("Error checking Firestore for CV:", firestoreError);
+      }
+
       // Définir l'URL directe immédiatement pour un chargement rapide
       const immediateUrl = getDirectPdfUrl(user.uid, cvName);
       console.log("Setting immediate PDF URL:", immediateUrl);
@@ -54,12 +83,21 @@ export function useCVApiService() {
         console.warn("Error getting download URL, continuing with direct URL:", error);
       }
       
-      // En arrière-plan, vérifier si le CV existe réellement
-      const pdfUrl = await checkExistingCV(user, cvName);
+      // En arrière-plan, vérifier si le CV existe réellement dans Storage
+      let pdfUrl;
+      try {
+        pdfUrl = await checkExistingCV(user, cvName);
+      } catch (storageCheckError) {
+        console.warn("Storage check failed:", storageCheckError);
+        // Si la vérification de Storage échoue mais que nous avons trouvé le CV dans Firestore
+        if (cvExistsInFirestore) {
+          pdfUrl = immediateUrl;
+        }
+      }
       
-      if (pdfUrl) {
-        console.log("CV found with URL:", pdfUrl);
-        setPdfUrl(pdfUrl);
+      if (pdfUrl || cvExistsInFirestore) {
+        console.log("CV found with URL:", pdfUrl || immediateUrl);
+        setPdfUrl(pdfUrl || immediateUrl);
         
         if (showToast) {
           toast({

@@ -6,6 +6,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
 import { useCVGeneration } from "./useCVGeneration";
 import { getDirectPdfUrl } from "@/utils/apiService";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/components/auth/firebase-config";
 
 export function useCVInitialization() {
   const { 
@@ -65,6 +67,34 @@ export function useCVInitialization() {
         setCheckFailed(true);
         setIsCheckingInProgress(false);
         return;
+      }
+      
+      // Vérifier si le CV existe dans Firestore (vérification supplémentaire)
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const cvs = userData.cvs || [];
+          
+          // Vérifier si un CV avec ce nom existe dans les données Firestore
+          const existingCV = cvs.find((cv: any) => cv.cv_name === name);
+          
+          if (existingCV) {
+            console.log("CV found in Firestore data");
+            
+            // Définir immédiatement une URL candidate pour le PDF
+            const directUrl = getDirectPdfUrl(user.uid, name);
+            console.log("Setting direct PDF URL from Firestore check:", directUrl);
+            setPdfUrl(directUrl);
+            
+            // Ne pas marquer comme échec puisque le CV existe
+            setCheckFailed(false);
+          }
+        }
+      } catch (firestoreError) {
+        console.warn("Error checking Firestore for CV:", firestoreError);
       }
       
       // Définir immédiatement une URL candidate pour le PDF

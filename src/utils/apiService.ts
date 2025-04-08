@@ -17,7 +17,7 @@ export const getDirectPdfUrl = (userId: string, cvName: string): string => {
   const encodedUserId = encodeURIComponent(userId);
   const encodedCvName = encodeURIComponent(cvName);
   
-  console.log(`Generating URL for CV: userId=${userId}, cvName="${cvName}", encodedName="${encodedCvName}"`);
+  console.log(`Generating direct URL for CV: userId=${userId}, cvName="${cvName}", encodedName="${encodedCvName}"`);
   
   // URL au format Firebase Storage compatible CORS
   return `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${encodedUserId}%2Fcvs%2F${encodedCvName}.pdf?alt=media&token=public`;
@@ -43,9 +43,27 @@ export const checkExistingCV = async (
       console.log("CV exists, download URL:", url);
       return url;
     } catch (error) {
-      // Si getDownloadURL échoue, retourner l'URL directe comme fallback
-      console.warn("getDownloadURL failed, using direct URL as fallback:", error);
-      return getDirectPdfUrl(user.uid, cvName);
+      console.warn("getDownloadURL failed for checking, trying alternate method:", error);
+      
+      // Vérifier si le CV existe dans Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const cvs = userData.cvs || [];
+        
+        // Vérifier si un CV avec ce nom existe dans les données Firestore
+        const existingCV = cvs.find((cv: CV) => cv.cv_name === cvName);
+        
+        if (existingCV) {
+          console.log("CV found in Firestore data, returning direct URL");
+          return getDirectPdfUrl(user.uid, cvName);
+        }
+      }
+      
+      console.log("CV not found in Firestore either");
+      return null;
     }
   } catch (error) {
     console.error("Error checking for existing CV:", error);
@@ -58,17 +76,21 @@ export const checkExistingCV = async (
  */
 export const getStoragePdfUrl = async (userId: string, cvName: string): Promise<string | null> => {
   try {
+    console.log(`Getting storage URL for CV: ${cvName}`);
     // Créer une référence au fichier
     const fileRef = ref(storage, `${userId}/cvs/${cvName}.pdf`);
     
     try {
       // Tenter d'obtenir l'URL via getDownloadURL
       const url = await getDownloadURL(fileRef);
+      console.log("Successfully got download URL:", url);
       return url;
     } catch (error) {
       // Fallback vers URL directe
       console.warn("getDownloadURL failed, using direct URL:", error);
-      return getDirectPdfUrl(userId, cvName);
+      const directUrl = getDirectPdfUrl(userId, cvName);
+      console.log("Using direct URL instead:", directUrl);
+      return directUrl;
     }
   } catch (error) {
     console.error("Error getting storage PDF URL:", error);

@@ -44,6 +44,7 @@ export function usePdfViewer() {
   // Obtenir l'URL de téléchargement via Firebase Storage
   const getDownloadPdfUrl = useCallback(async (userId: string, cvName: string): Promise<string | null> => {
     try {
+      console.log(`Attempting to get download URL for "${cvName}"`);
       const fileRef = ref(storage, `${userId}/cvs/${cvName}.pdf`);
       const url = await getDownloadURL(fileRef);
       console.log("Got download URL:", url);
@@ -79,6 +80,7 @@ export function usePdfViewer() {
       // Essayer d'obtenir une URL de téléchargement fiable
       const attemptLoadWithDownloadUrl = async () => {
         try {
+          console.log(`Attempting to get download URL for CV "${cvName}"`);
           const downloadUrl = await getDownloadPdfUrl(user.uid, cvName);
           if (downloadUrl) {
             console.log("Setting download URL:", downloadUrl);

@@ -1,9 +1,10 @@
 
-import { FileText, Loader2, FileX, RefreshCcw } from "lucide-react";
+import { FileText, Loader2, FileX, RefreshCcw, Download, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CVPreviewPanelProps {
   isGenerating: boolean;
@@ -21,11 +22,13 @@ export const CVPreviewPanel = ({
   retryCheckForExistingCV
 }: CVPreviewPanelProps) => {
   const [pdfLoadError, setPdfLoadError] = useState(false);
+  const [useDirectView, setUseDirectView] = useState(false);
   
   // Réinitialiser l'état d'erreur lorsque l'URL du PDF change
   useEffect(() => {
     if (pdfUrl) {
       setPdfLoadError(false);
+      setUseDirectView(false);
     }
   }, [pdfUrl]);
 
@@ -37,7 +40,18 @@ export const CVPreviewPanel = ({
   const handleRetry = () => {
     console.log("Retrying CV loading...");
     setPdfLoadError(false);
+    setUseDirectView(false);
     retryCheckForExistingCV();
+  };
+  
+  const handleOpenInNewTab = () => {
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+  
+  const handleUseDirectView = () => {
+    setUseDirectView(true);
   };
 
   return (
@@ -61,22 +75,57 @@ export const CVPreviewPanel = ({
             />
           </div>
         ) : pdfUrl && !pdfLoadError ? (
-          <div className="rounded-md overflow-hidden border border-gray-300">
-            <iframe 
-              src={pdfUrl}
-              className="w-full h-[500px]"
-              title="CV généré"
-              onError={handlePdfError}
-            />
-            <div className="mt-4 flex justify-center">
-              <Button 
-                variant="default" 
-                onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Télécharger le PDF
-              </Button>
-            </div>
+          <div className="rounded-md overflow-hidden">
+            {useDirectView ? (
+              <div className="p-4 text-center">
+                <Alert className="mb-4">
+                  <AlertDescription>
+                    L'aperçu intégré n'est pas disponible. Utilisez les boutons ci-dessous pour visualiser ou télécharger votre CV.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+                  <Button 
+                    variant="default" 
+                    onClick={handleOpenInNewTab}
+                  >
+                    <ArrowUpRight className="w-4 h-4 mr-2" />
+                    Ouvrir dans un nouvel onglet
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => window.location.href = pdfUrl}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <iframe 
+                  src={pdfUrl}
+                  className="w-full h-[500px] border border-gray-300"
+                  title="CV généré"
+                  onError={handlePdfError}
+                />
+                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  <Button 
+                    variant="default" 
+                    onClick={handleOpenInNewTab}
+                  >
+                    <ArrowUpRight className="w-4 h-4 mr-2" />
+                    Ouvrir dans un nouvel onglet
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => window.location.href = pdfUrl}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger le PDF
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="p-6 text-center">
@@ -87,20 +136,35 @@ export const CVPreviewPanel = ({
               </h3>
               <p className="text-gray-500 mt-2">
                 {pdfLoadError 
-                  ? "Impossible d'afficher le PDF. Il peut être inaccessible ou corrompu."
+                  ? "Impossible d'afficher le PDF dans l'aperçu. Essayez de l'ouvrir directement."
                   : "Aucun CV n'a encore été généré avec ce nom."}
               </p>
-              {(checkFailed || pdfLoadError) && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleRetry}
-                  className="mt-4 flex items-center"
-                  size="sm"
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  Vérifier à nouveau
-                </Button>
-              )}
+              
+              <div className="flex flex-wrap gap-2 mt-4">
+                {pdfLoadError && pdfUrl && (
+                  <Button 
+                    variant="default" 
+                    onClick={handleUseDirectView}
+                    className="flex items-center"
+                    size="sm"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Utiliser la vue directe
+                  </Button>
+                )}
+                
+                {(checkFailed || pdfLoadError) && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRetry}
+                    className="flex items-center"
+                    size="sm"
+                  >
+                    <RefreshCcw className="w-4 h-4 mr-2" />
+                    Vérifier à nouveau
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

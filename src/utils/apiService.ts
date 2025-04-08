@@ -11,13 +11,17 @@ interface GenerateCVResponse {
   pdfPath?: string;
 }
 
-// Méthode pour obtenir l'URL directe avec encodage correct des espaces
+// Méthode pour obtenir l'URL directe avec double encodage des caractères spéciaux
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
-  // Encoder le nom du CV avant de l'utiliser dans l'URL
-  // Utiliser encodeURIComponent pour gérer correctement les espaces et caractères spéciaux
+  // Encodage des caractères spéciaux pour l'URL
   const encodedName = encodeURIComponent(cvName);
+  
   console.log(`Original name: "${cvName}", Encoded name: "${encodedName}"`);
-  return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
+  
+  // URL directe vers le PDF dans Firebase Storage
+  const publicUrl = `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
+  
+  return publicUrl;
 };
 
 /**
@@ -33,8 +37,20 @@ export const checkExistingCV = async (
     const directUrl = getDirectPdfUrl(user.uid, cvName);
     console.log("Checking CV existence with URL:", directUrl);
     
-    // On ne fait pas de vérification d'existence, on suppose que le fichier existe
-    // et on laisse le navigateur gérer l'affichage d'erreur si nécessaire
+    // Tenter une requête HEAD pour vérifier si le fichier existe
+    try {
+      const response = await fetch(directUrl, { method: 'HEAD', cache: 'no-cache' });
+      if (response.ok) {
+        console.log("CV found via HEAD request");
+        return directUrl;
+      }
+      console.warn("CV not found via HEAD request:", response.status, response.statusText);
+    } catch (error) {
+      console.warn("HEAD request failed, continuing anyway:", error);
+    }
+    
+    // Renvoyer l'URL de toute façon, même si le HEAD a échoué 
+    // (certains serveurs bloquent HEAD mais autorisent GET)
     return directUrl;
     
   } catch (error) {

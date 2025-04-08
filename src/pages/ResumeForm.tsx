@@ -125,6 +125,20 @@ const ResumeForm = () => {
                 </div>
               </div>
             )}
+            
+            {checkFailed && (
+              <div className="mt-4 w-full flex flex-col items-center">
+                <p className="text-red-500 mb-2">Impossible de trouver le CV existant.</p>
+                <Button 
+                  variant="outline" 
+                  onClick={retryCheckForExistingCV}
+                  className="flex items-center"
+                >
+                  <RefreshCcw className="w-4 h-4 mr-2" />
+                  Réessayer
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <Card className="w-full max-w-2xl mx-auto">

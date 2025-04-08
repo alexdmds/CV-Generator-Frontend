@@ -39,7 +39,7 @@ export const checkExistingCV = async (
       if (existingCV) {
         try {
           // Create a reference to the file in Firebase Storage
-          const storagePath = `${user.uid}/cvs/${cvName}.pdf`;
+          const storagePath = `${user.uid}/cvs/${encodeURIComponent(cvName)}.pdf`;
           console.log(`Checking for PDF at path: ${storagePath}`);
           const storageRef = ref(storage, storagePath);
           
@@ -101,8 +101,7 @@ export const generateCVApi = async (
     
     // Always try to get a fresh authenticated URL from Firebase Storage
     try {
-      const pdfFileName = encodeURIComponent(cvName).replace(/%20/g, '%20');
-      const storagePath = `${user.uid}/cvs/${pdfFileName}.pdf`;
+      const storagePath = `${user.uid}/cvs/${encodeURIComponent(cvName)}.pdf`;
       console.log("Trying to get authenticated URL for:", storagePath);
       
       const storageRef = ref(storage, storagePath);

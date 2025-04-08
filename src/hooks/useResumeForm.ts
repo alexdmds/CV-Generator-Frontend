@@ -25,6 +25,7 @@ export function useResumeForm() {
   const { toast } = useToast();
   const [hasCheckedForExistingCV, setHasCheckedForExistingCV] = useState(false);
   const [isCheckingInProgress, setIsCheckingInProgress] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
   
   const {
     cvNameDialogOpen,
@@ -38,7 +39,7 @@ export function useResumeForm() {
     handleUpdateCV
   } = useCVSubmission();
 
-  // Using our new hooks
+  // Using our hooks
   const confirmDialog = useConfirmDialog();
   const { 
     isGenerating, 
@@ -58,16 +59,35 @@ export function useResumeForm() {
   
   // Check if a CV already exists with the given name
   const checkForExistingCV = useCallback(async (name: string) => {
-    if (name && !hasCheckedForExistingCV && !isCheckingInProgress) {
-      setIsCheckingInProgress(true);
-      try {
-        await checkExistingCVAndDisplay(name, false);
-        setHasCheckedForExistingCV(true);
-      } finally {
-        setIsCheckingInProgress(false);
-      }
+    if (!name || hasCheckedForExistingCV || isCheckingInProgress) {
+      return;
+    }
+    
+    setIsCheckingInProgress(true);
+    
+    try {
+      console.log(`Starting CV check for: ${name}`);
+      const checkResult = await checkExistingCVAndDisplay(name, false);
+      console.log(`CV check result: ${checkResult}`);
+      
+      setHasCheckedForExistingCV(true);
+      setCheckFailed(!checkResult);
+    } catch (error) {
+      console.error("Error in checkForExistingCV:", error);
+      setCheckFailed(true);
+    } finally {
+      setIsCheckingInProgress(false);
     }
   }, [checkExistingCVAndDisplay, hasCheckedForExistingCV, isCheckingInProgress]);
+  
+  // Function to retry checking if the first attempt failed
+  const retryCheckForExistingCV = useCallback(() => {
+    if (cvName && checkFailed) {
+      setHasCheckedForExistingCV(false);
+      setCheckFailed(false);
+      // The check will be triggered by the effect based on these state changes
+    }
+  }, [cvName, checkFailed]);
   
   // Fonction pour ouvrir le dialogue de confirmation
   const openConfirmDialog = async () => {
@@ -170,6 +190,8 @@ export function useResumeForm() {
     checkForExistingCV,
     hasCheckedForExistingCV,
     setHasCheckedForExistingCV,
-    isCheckingInProgress
+    isCheckingInProgress,
+    checkFailed,
+    retryCheckForExistingCV
   };
 }

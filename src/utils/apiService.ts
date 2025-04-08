@@ -19,6 +19,7 @@ export const checkExistingCV = async (
   cvName: string
 ): Promise<string | null> => {
   try {
+    console.log(`Starting check for existing CV with name: ${cvName}`);
     const userDocRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userDocRef);
     
@@ -38,12 +39,13 @@ export const checkExistingCV = async (
       if (existingCV) {
         try {
           // Create a reference to the file in Firebase Storage
-          console.log(`Checking for PDF at path: ${user.uid}/cvs/${cvName}.pdf`);
-          const storageRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
+          const storagePath = `${user.uid}/cvs/${cvName}.pdf`;
+          console.log(`Checking for PDF at path: ${storagePath}`);
+          const storageRef = ref(storage, storagePath);
           
-          // Get the authenticated download URL with a timeout
+          // Set a shorter timeout for the download URL request (5 seconds)
           const timeoutPromise = new Promise<null>((_, reject) => {
-            setTimeout(() => reject(new Error("Timeout getting download URL")), 10000);
+            setTimeout(() => reject(new Error("Timeout getting download URL")), 5000);
           });
           
           const urlPromise = getDownloadURL(storageRef);
@@ -111,7 +113,7 @@ export const generateCVApi = async (
       
       // Add timeout to avoid hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Timeout getting download URL")), 15000);
+        setTimeout(() => reject(new Error("Timeout getting download URL")), 10000);
       });
       
       const urlPromise = getDownloadURL(storageRef);

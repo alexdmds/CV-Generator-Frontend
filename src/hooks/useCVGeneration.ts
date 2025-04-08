@@ -26,23 +26,55 @@ export function useCVGeneration() {
         return false;
       }
 
+      // Set checking state
       setIsChecking(true);
+      
+      console.log(`Checking for existing CV: ${cvName}`);
+
+      // Add timeout to the whole operation
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Vérification du CV existant a expiré"));
+        }, 10000); // 10 second timeout
+      });
 
       // Check if CV already exists
-      const existingPdfUrl = await checkExistingCV(user, cvName);
-      
-      if (existingPdfUrl) {
-        setPdfUrl(existingPdfUrl);
+      const checkPromise = new Promise<boolean>(async (resolve) => {
+        try {
+          const existingPdfUrl = await checkExistingCV(user, cvName);
+          
+          if (existingPdfUrl) {
+            setPdfUrl(existingPdfUrl);
+            if (showToast) {
+              toast({
+                title: "CV trouvé",
+                description: "Le CV existe déjà et a été chargé",
+              });
+            }
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        } catch (error) {
+          console.error("Error in checkPromise:", error);
+          resolve(false);
+        }
+      });
+
+      // Race between the check operation and timeout
+      try {
+        return await Promise.race([checkPromise, timeoutPromise]);
+      } catch (timeoutError) {
+        console.error("Checking for existing CV timed out:", timeoutError);
         if (showToast) {
           toast({
-            title: "CV trouvé",
-            description: "Le CV existe déjà et a été chargé",
+            title: "Recherche expirée",
+            description: "La recherche du CV existant a pris trop de temps",
+            variant: "destructive",
           });
         }
-        return true;
+        return false;
       }
-      
-      return false;
     } catch (error) {
       console.error("Error checking for existing CV:", error);
       return false;

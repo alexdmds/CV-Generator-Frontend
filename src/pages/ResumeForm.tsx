@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
-import { ArrowLeft, FileText, Loader2, PencilIcon } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, PencilIcon, RefreshCcw } from "lucide-react";
 import { useResumeForm } from "@/hooks/useResumeForm";
 import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
@@ -33,7 +33,9 @@ const ResumeForm = () => {
     checkForExistingCV,
     hasCheckedForExistingCV,
     setHasCheckedForExistingCV,
-    isCheckingInProgress
+    isCheckingInProgress,
+    checkFailed,
+    retryCheckForExistingCV
   } = useResumeForm();
 
   // Check for existing CV when the component mounts or when cv name changes
@@ -101,6 +103,18 @@ const ResumeForm = () => {
                     ? "Le processus peut prendre jusqu'à 1 minute." 
                     : "Vérification si un CV existe déjà avec ce nom..."}
                 </p>
+                
+                {isChecking && !isGenerating && (
+                  <Button
+                    variant="outline"
+                    onClick={retryCheckForExistingCV}
+                    className="mt-4"
+                    disabled={!checkFailed}
+                  >
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Réessayer
+                  </Button>
+                )}
               </div>
             )}
             

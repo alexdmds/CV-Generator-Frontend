@@ -2,13 +2,15 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
-import { ArrowLeft, FileText, Loader2, PencilIcon, RefreshCcw } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, PencilIcon, RefreshCcw, FileX } from "lucide-react";
 import { useResumeForm } from "@/hooks/useResumeForm";
 import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
 import { GenerateConfirmDialog } from "@/components/resume/components/GenerateConfirmDialog";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useEffect } from "react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ResumeForm = () => {
   const {
@@ -38,10 +40,10 @@ const ResumeForm = () => {
     retryCheckForExistingCV
   } = useResumeForm();
 
-  // Vérifier l'existence du CV au chargement du composant
+  // On vérifie l'existence du CV en arrière-plan, sans bloquer l'interface
   useEffect(() => {
     if (cvName && !hasCheckedForExistingCV && !isCheckingInProgress) {
-      console.log(`Checking for existing CV on component mount: ${cvName}`);
+      console.log(`Checking for existing CV on component mount in background: ${cvName}`);
       checkForExistingCV(cvName);
     }
   }, [cvName, checkForExistingCV, hasCheckedForExistingCV, isCheckingInProgress]);
@@ -54,8 +56,6 @@ const ResumeForm = () => {
     handleDialogOpenChange(true);
   };
 
-  const isLoading = isGenerating || isChecking;
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -64,7 +64,7 @@ const ResumeForm = () => {
           variant="ghost"
           onClick={() => navigate("/resumes")}
           className="mb-6 flex items-center gap-2"
-          disabled={isSubmitting || isLoading}
+          disabled={isSubmitting || isGenerating}
         >
           <ArrowLeft className="w-4 h-4" />
           Retour aux CVs
@@ -77,82 +77,104 @@ const ResumeForm = () => {
             size="icon" 
             className="h-8 w-8 ml-2" 
             onClick={handleRenameClick}
-            disabled={isLoading}
+            disabled={isGenerating}
           >
             <PencilIcon className="h-4 w-4" />
             <span className="sr-only">Modifier le nom</span>
           </Button>
         </div>
         
-        {isLoading ? (
-          <div className="w-full max-w-2xl mx-auto">
-            <ProfileGeneratingIndicator 
-              message={isGenerating ? "Génération du CV en cours..." : "Recherche du CV existant..."}
-            />
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Fiche de poste (toujours affichée) */}
+          <div className="flex-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isEditing ? "Modifier le CV" : "Nouveau CV"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <JobDescriptionForm 
+                  jobDescription={jobDescription}
+                  setJobDescription={setJobDescription}
+                  onGenerateClick={handleGenerateResume}
+                  onSaveClick={handleSaveJobDescription}
+                  isEditing={isEditing}
+                  cvName={cvName}
+                  isSubmitting={isSubmitting || isGenerating}
+                />
+              </CardContent>
+            </Card>
           </div>
-        ) : pdfUrl ? (
-          <div className="w-full max-w-2xl mx-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Votre CV est prêt !</h3>
-            <div className="rounded-md overflow-hidden border border-gray-300">
-              <iframe 
-                src={pdfUrl}
-                className="w-full h-[70vh]"
-                title="CV généré"
-              />
-            </div>
-            <div className="mt-4 flex justify-center space-x-4">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate("/resumes")}
-              >
-                Retour aux CVs
-              </Button>
-              <Button 
-                variant="default" 
-                onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Télécharger le PDF
-              </Button>
-            </div>
+          
+          {/* Panneau latéral pour le CV */}
+          <div className="w-full lg:w-1/2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Aperçu du CV</span>
+                  {isChecking && (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Chargement...
+                    </div>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isGenerating ? (
+                  <div className="p-6 text-center">
+                    <ProfileGeneratingIndicator 
+                      message="Génération du CV en cours..."
+                    />
+                  </div>
+                ) : pdfUrl ? (
+                  <div className="rounded-md overflow-hidden border border-gray-300">
+                    <iframe 
+                      src={pdfUrl}
+                      className="w-full h-[500px]"
+                      title="CV généré"
+                      onError={() => {
+                        console.error("Failed to load PDF, setting checkFailed to true");
+                        retryCheckForExistingCV();
+                      }}
+                    />
+                    <div className="mt-4 flex justify-center">
+                      <Button 
+                        variant="default" 
+                        onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Télécharger le PDF
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center">
+                    <div className="mb-4 flex flex-col items-center justify-center">
+                      <FileX className="w-16 h-16 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900">CV pas encore généré</h3>
+                      <p className="text-gray-500 mt-2">
+                        Aucun CV n'a encore été généré avec ce nom.
+                      </p>
+                      {checkFailed && (
+                        <Button 
+                          variant="outline" 
+                          onClick={retryCheckForExistingCV}
+                          className="mt-4 flex items-center"
+                          size="sm"
+                        >
+                          <RefreshCcw className="w-4 h-4 mr-2" />
+                          Vérifier à nouveau
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        ) : (
-          <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>
-                {checkFailed ? "CV pas encore généré" : (isEditing ? "Modifier le CV" : "Nouveau CV")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {checkFailed && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-md border border-gray-200 text-center">
-                  <p className="text-gray-700">
-                    Aucun CV n'a encore été généré avec ce nom.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={retryCheckForExistingCV}
-                    className="mt-2 flex items-center mx-auto"
-                    size="sm"
-                  >
-                    <RefreshCcw className="w-4 h-4 mr-2" />
-                    Vérifier à nouveau
-                  </Button>
-                </div>
-              )}
-              
-              <JobDescriptionForm 
-                jobDescription={jobDescription}
-                setJobDescription={setJobDescription}
-                onGenerateClick={handleGenerateResume}
-                onSaveClick={handleSaveJobDescription}
-                isEditing={isEditing}
-                cvName={cvName}
-                isSubmitting={isSubmitting || isLoading}
-              />
-            </CardContent>
-          </Card>
-        )}
+        </div>
       </div>
       
       <CvNameDialog

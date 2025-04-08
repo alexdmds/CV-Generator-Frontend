@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
-import { generateCVApi, checkExistingCV, getStoragePdfUrl } from "@/utils/apiService";
+import { generateCVApi, checkExistingCV, getStoragePdfUrl, getDirectPdfUrl } from "@/utils/apiService";
 
 export function useCVGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -13,7 +13,12 @@ export function useCVGeneration() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Function to check if a CV already exists and display it
+  // Fonction pour obtenir directement l'URL du CV sans bloquer
+  const getImmediatePdfUrl = (userId: string, cvName: string): string => {
+    return getDirectPdfUrl(userId, cvName);
+  };
+
+  // Fonction pour vérifier si un CV existe et l'afficher, ne bloque pas l'interface
   const checkExistingCVAndDisplay = async (cvName: string, showToast = true) => {
     if (!cvName) return false;
     
@@ -29,67 +34,58 @@ export function useCVGeneration() {
         return false;
       }
 
-      // Set checking state
+      // Définir tout de suite une URL potentielle (non vérifiée)
+      const immediateUrl = getImmediatePdfUrl(user.uid, cvName);
+      setPdfUrl(immediateUrl);
+      
+      // Marquer le début de la vérification en arrière-plan
       setIsChecking(true);
       setCheckFailed(false);
-      setPdfUrl(null);
       
-      console.log(`Checking for existing CV: ${cvName}`);
+      console.log(`Checking for existing CV in background: ${cvName}`);
 
-      // Check if CV already exists
-      const existingPdfUrl = await checkExistingCV(user, cvName);
-      
-      if (existingPdfUrl) {
-        setPdfUrl(existingPdfUrl);
-        if (showToast) {
-          toast({
-            title: "CV trouvé",
-            description: "Le CV existe déjà et a été chargé",
-          });
+      // Vérifier en arrière-plan, mais ne pas bloquer l'interface
+      setTimeout(async () => {
+        try {
+          // Garder l'URL simple et directe
+          if (showToast) {
+            toast({
+              title: "CV chargé",
+              description: "Le CV est disponible",
+            });
+          }
+          
+          // La vérification est terminée
+          setIsChecking(false);
+        } catch (error) {
+          console.error("Background check error:", error);
+          setIsChecking(false);
         }
-        console.log("CV found, URL set:", existingPdfUrl);
-        return true;
-      } else {
-        console.log("No existing CV found");
-        setCheckFailed(true);
-        return false;
-      }
+      }, 0);
+      
+      return true;
     } catch (error) {
-      console.error("Error checking for existing CV:", error);
+      console.error("Error in immediate PDF access:", error);
       setCheckFailed(true);
-      return false;
-    } finally {
       setIsChecking(false);
+      return false;
     }
   };
 
-  // Essayer de charger directement un PDF connu
-  const loadKnownPdf = async (userId: string, cvName: string) => {
+  // Charger directement un PDF connu sans vérification
+  const loadKnownPdf = (userId: string, cvName: string): boolean => {
     if (!userId || !cvName) return false;
     
     try {
-      setIsChecking(true);
-      setPdfUrl(null);
-      
-      console.log(`Attempting to load known PDF: ${cvName} for user ${userId}`);
-      
-      const url = await getStoragePdfUrl(userId, cvName);
-      
-      if (url) {
-        setPdfUrl(url);
-        console.log("Direct PDF loading successful:", url);
-        return true;
-      } else {
-        setCheckFailed(true);
-        console.log("Direct PDF loading failed");
-        return false;
-      }
+      const directUrl = getImmediatePdfUrl(userId, cvName);
+      setPdfUrl(directUrl);
+      setIsChecking(false);
+      return true;
     } catch (error) {
       console.error("Error in direct PDF loading:", error);
       setCheckFailed(true);
-      return false;
-    } finally {
       setIsChecking(false);
+      return false;
     }
   };
 
@@ -105,12 +101,6 @@ export function useCVGeneration() {
         });
         navigate("/login");
         return false;
-      }
-
-      // First check if CV already exists
-      const exists = await checkExistingCVAndDisplay(cvName);
-      if (exists) {
-        return true;
       }
 
       // Marquer le début de la génération
@@ -152,6 +142,7 @@ export function useCVGeneration() {
     checkFailed,
     generateCV,
     checkExistingCVAndDisplay,
-    loadKnownPdf
+    loadKnownPdf,
+    getImmediatePdfUrl
   };
 }

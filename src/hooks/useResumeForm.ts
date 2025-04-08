@@ -49,7 +49,7 @@ export function useResumeForm() {
     generateCV,
     checkExistingCVAndDisplay,
     loadKnownPdf,
-    checkFailed: generationCheckFailed
+    getImmediatePdfUrl
   } = useCVGeneration();
   
   // Get initial CV name from URL if present
@@ -69,7 +69,7 @@ export function useResumeForm() {
     }
   }, [searchParams, params, setCvName]);
   
-  // Check if a CV already exists with the given name
+  // Vérification non bloquante du CV existant
   const checkForExistingCV = useCallback(async (name: string) => {
     if (!name || hasCheckedForExistingCV || isCheckingInProgress) {
       return;
@@ -78,33 +78,38 @@ export function useResumeForm() {
     setIsCheckingInProgress(true);
     
     try {
-      console.log(`Starting CV check for: ${name}`);
+      console.log(`Starting non-blocking CV check for: ${name}`);
       const user = auth.currentUser;
       
       if (!user) {
         console.error("No authenticated user found");
         setCheckFailed(true);
+        setIsCheckingInProgress(false);
         return;
       }
       
-      // Essayer de charger directement le PDF connu
-      const directLoaded = await loadKnownPdf(user.uid, name);
+      // Définir immédiatement une URL candidate pour le PDF
+      const directUrl = getImmediatePdfUrl(user.uid, name);
       
-      if (!directLoaded) {
-        // Si le chargement direct échoue, essayer la méthode normale
-        const checkResult = await checkExistingCVAndDisplay(name, false);
-        console.log(`CV check result: ${checkResult}`);
-        setCheckFailed(!checkResult);
-      }
+      // Vérifier en arrière-plan sans bloquer l'interface
+      setTimeout(async () => {
+        try {
+          // Essayer aussi la méthode normale en arrière-plan
+          const checkResult = await checkExistingCVAndDisplay(name, false);
+          console.log(`Background CV check result: ${checkResult}`);
+          setCheckFailed(!checkResult);
+        } finally {
+          setHasCheckedForExistingCV(true);
+          setIsCheckingInProgress(false);
+        }
+      }, 0);
       
-      setHasCheckedForExistingCV(true);
     } catch (error) {
-      console.error("Error in checkForExistingCV:", error);
+      console.error("Error in non-blocking checkForExistingCV:", error);
       setCheckFailed(true);
-    } finally {
       setIsCheckingInProgress(false);
     }
-  }, [checkExistingCVAndDisplay, loadKnownPdf, hasCheckedForExistingCV, isCheckingInProgress]);
+  }, [checkExistingCVAndDisplay, getImmediatePdfUrl, hasCheckedForExistingCV, isCheckingInProgress]);
   
   // Function to retry checking if the first attempt failed
   const retryCheckForExistingCV = useCallback(() => {
@@ -114,13 +119,6 @@ export function useResumeForm() {
       checkForExistingCV(cvName);
     }
   }, [cvName, checkForExistingCV]);
-  
-  // Vérifier l'existence du CV lorsque le nom change
-  useEffect(() => {
-    if (cvName && !hasCheckedForExistingCV && !isCheckingInProgress) {
-      checkForExistingCV(cvName);
-    }
-  }, [cvName, checkForExistingCV, hasCheckedForExistingCV, isCheckingInProgress]);
   
   // Réinitialiser le drapeau de vérification lorsque le nom du CV change
   useEffect(() => {

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
@@ -9,8 +8,6 @@ import { JobDescriptionForm } from "@/components/resume/components/JobDescriptio
 import { GenerateConfirmDialog } from "@/components/resume/components/GenerateConfirmDialog";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useEffect } from "react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const ResumeForm = () => {
   const {

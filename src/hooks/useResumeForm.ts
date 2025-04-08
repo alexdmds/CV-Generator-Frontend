@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useCVData } from "./useCVData";
 import { useCVNameDialog } from "./useCVNameDialog";
 import { useCVSubmission } from "./useCVSubmission";
@@ -23,6 +23,7 @@ export function useResumeForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const params = useParams<{ id?: string }>();
   const [hasCheckedForExistingCV, setHasCheckedForExistingCV] = useState(false);
   const [isCheckingInProgress, setIsCheckingInProgress] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
@@ -47,16 +48,26 @@ export function useResumeForm() {
     pdfUrl, 
     generateCV,
     checkExistingCVAndDisplay,
+    loadKnownPdf,
     checkFailed: generationCheckFailed
   } = useCVGeneration();
   
   // Get initial CV name from URL if present
   useEffect(() => {
     const nameFromUrl = searchParams.get('name');
-    if (nameFromUrl) {
-      setCvName(decodeURIComponent(nameFromUrl));
+    const nameFromParams = params.id;
+    
+    if (nameFromParams && nameFromParams !== 'new') {
+      // Décodage du nom du CV depuis l'URL
+      const decodedName = decodeURIComponent(nameFromParams);
+      setCvName(decodedName);
+      console.log("CV name from URL params:", decodedName);
+    } else if (nameFromUrl) {
+      const decodedName = decodeURIComponent(nameFromUrl);
+      setCvName(decodedName);
+      console.log("CV name from URL query:", decodedName);
     }
-  }, [searchParams, setCvName]);
+  }, [searchParams, params, setCvName]);
   
   // Check if a CV already exists with the given name
   const checkForExistingCV = useCallback(async (name: string) => {
@@ -68,18 +79,32 @@ export function useResumeForm() {
     
     try {
       console.log(`Starting CV check for: ${name}`);
-      const checkResult = await checkExistingCVAndDisplay(name, false);
-      console.log(`CV check result: ${checkResult}`);
+      const user = auth.currentUser;
+      
+      if (!user) {
+        console.error("No authenticated user found");
+        setCheckFailed(true);
+        return;
+      }
+      
+      // Essayer de charger directement le PDF connu
+      const directLoaded = await loadKnownPdf(user.uid, name);
+      
+      if (!directLoaded) {
+        // Si le chargement direct échoue, essayer la méthode normale
+        const checkResult = await checkExistingCVAndDisplay(name, false);
+        console.log(`CV check result: ${checkResult}`);
+        setCheckFailed(!checkResult);
+      }
       
       setHasCheckedForExistingCV(true);
-      setCheckFailed(!checkResult);
     } catch (error) {
       console.error("Error in checkForExistingCV:", error);
       setCheckFailed(true);
     } finally {
       setIsCheckingInProgress(false);
     }
-  }, [checkExistingCVAndDisplay, hasCheckedForExistingCV, isCheckingInProgress]);
+  }, [checkExistingCVAndDisplay, loadKnownPdf, hasCheckedForExistingCV, isCheckingInProgress]);
   
   // Function to retry checking if the first attempt failed
   const retryCheckForExistingCV = useCallback(() => {

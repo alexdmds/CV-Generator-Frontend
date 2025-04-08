@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
-import { generateCVApi, checkExistingCV } from "@/utils/apiService";
+import { generateCVApi, checkExistingCV, getStoragePdfUrl } from "@/utils/apiService";
 
 export function useCVGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -63,6 +63,36 @@ export function useCVGeneration() {
     }
   };
 
+  // Essayer de charger directement un PDF connu
+  const loadKnownPdf = async (userId: string, cvName: string) => {
+    if (!userId || !cvName) return false;
+    
+    try {
+      setIsChecking(true);
+      setPdfUrl(null);
+      
+      console.log(`Attempting to load known PDF: ${cvName} for user ${userId}`);
+      
+      const url = await getStoragePdfUrl(userId, cvName);
+      
+      if (url) {
+        setPdfUrl(url);
+        console.log("Direct PDF loading successful:", url);
+        return true;
+      } else {
+        setCheckFailed(true);
+        console.log("Direct PDF loading failed");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in direct PDF loading:", error);
+      setCheckFailed(true);
+      return false;
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   // Fonction pour générer le CV après confirmation
   const generateCV = async (cvName: string) => {
     try {
@@ -85,6 +115,7 @@ export function useCVGeneration() {
 
       // Marquer le début de la génération
       setIsGenerating(true);
+      setCheckFailed(false);
 
       // Appel à l'API de génération via notre service
       const result = await generateCVApi(user, cvName);
@@ -120,6 +151,7 @@ export function useCVGeneration() {
     pdfUrl,
     checkFailed,
     generateCV,
-    checkExistingCVAndDisplay
+    checkExistingCVAndDisplay,
+    loadKnownPdf
   };
 }

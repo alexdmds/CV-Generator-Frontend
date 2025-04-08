@@ -38,7 +38,7 @@ const ResumeForm = () => {
     retryCheckForExistingCV
   } = useResumeForm();
 
-  // Vérifier l'existence du CV au chargement du composant ou lorsque le nom change
+  // Vérifier l'existence du CV au chargement du composant
   useEffect(() => {
     if (cvName && !hasCheckedForExistingCV && !isCheckingInProgress) {
       console.log(`Checking for existing CV on component mount: ${cvName}`);

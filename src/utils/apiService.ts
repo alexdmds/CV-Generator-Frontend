@@ -18,11 +18,8 @@ export const getDirectPdfUrl = (userId: string, cvName: string): string => {
   
   console.log(`Original name: "${cvName}", Encoded name: "${encodedName}"`);
   
-  // URL directe vers le PDF dans Firebase Storage
-  // On utilise l'URL publique directe au lieu de celle qui nécessite un token Firebase
-  const publicUrl = `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
-  
-  return publicUrl;
+  // Utiliser l'URL directe de Firebase Storage
+  return `https://firebasestorage.googleapis.com/v0/b/cv-generator-447314.appspot.com/o/${encodeURIComponent(userId)}%2Fcvs%2F${encodedName}.pdf?alt=media`;
 };
 
 /**

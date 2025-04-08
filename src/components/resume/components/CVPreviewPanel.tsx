@@ -29,18 +29,21 @@ export const CVPreviewPanel = ({
   // Réinitialiser l'état d'erreur lorsque l'URL du PDF change
   useEffect(() => {
     if (pdfUrl) {
+      console.log("CVPreviewPanel: PDF URL received", pdfUrl);
       setPdfLoadError(false);
       setUseDirectView(false);
       setPdfLoaded(false);
       
-      // Check if the URL is accessible
-      const img = new Image();
-      img.onload = () => setPdfLoaded(true);
-      img.onerror = () => {
-        console.log("Failed to preload PDF URL:", pdfUrl);
-        // Don't set error yet, let the iframe try
-      };
-      img.src = pdfUrl;
+      // Essayer de précharger l'URL pour vérifier si elle est accessible
+      fetch(pdfUrl, { method: 'HEAD', mode: 'no-cors' })
+        .then(() => {
+          console.log("PDF URL precheck success");
+          setPdfLoaded(true);
+        })
+        .catch(error => {
+          console.error("PDF URL precheck failed:", error);
+          // Pas de setPdfLoadError, on laisse l'iframe essayer
+        });
     }
   }, [pdfUrl]);
 
@@ -64,16 +67,20 @@ export const CVPreviewPanel = ({
   
   const handleOpenInNewTab = () => {
     if (pdfUrl) {
+      console.log("Opening PDF in new tab:", pdfUrl);
       window.open(pdfUrl, '_blank', 'noopener,noreferrer');
     }
   };
   
   const handleUseDirectView = () => {
+    console.log("Switching to direct view mode");
     setUseDirectView(true);
   };
 
   const handleDownload = () => {
     if (pdfUrl) {
+      console.log("Downloading PDF:", pdfUrl);
+      // Téléchargement direct
       const link = document.createElement('a');
       link.href = pdfUrl;
       link.setAttribute('download', 'cv.pdf');
@@ -131,33 +138,16 @@ export const CVPreviewPanel = ({
               </div>
             ) : (
               <>
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <div className="relative">
-                      <iframe 
-                        src={pdfUrl}
-                        className="w-full h-[500px] border border-gray-300"
-                        title="CV généré"
-                        onError={handlePdfError}
-                        onLoad={handlePdfLoad}
-                        sandbox="allow-same-origin allow-scripts allow-forms"
-                      />
-                      <div className="absolute inset-0 bg-transparent" />
-                    </div>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[85%] sm:w-[75%] md:w-[65%] lg:w-[55%] xl:w-[45%]">
-                    <div className="h-full flex flex-col">
-                      <h2 className="text-xl font-bold mb-2">Aperçu en plein écran</h2>
-                      <div className="flex-1 overflow-hidden">
-                        <iframe 
-                          src={pdfUrl}
-                          className="w-full h-full border border-gray-300"
-                          title="CV généré plein écran"
-                        />
-                      </div>
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                <div className="relative">
+                  <iframe 
+                    src={pdfUrl}
+                    className="w-full h-[500px] border border-gray-300"
+                    title="CV généré"
+                    onError={handlePdfError}
+                    onLoad={handlePdfLoad}
+                    sandbox="allow-same-origin allow-scripts allow-forms"
+                  />
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
                   <Button 
                     variant="default" 

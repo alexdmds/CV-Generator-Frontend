@@ -99,34 +99,31 @@ export const generateCVApi = async (
     const data = await response.json();
     console.log("CV generation API response:", data);
     
-    // Use the actual PDF URL from the API response if available
-    if (data.pdfUrl || data.pdf_url) {
-      return {
-        success: true,
-        pdfPath: data.pdfUrl || data.pdf_url
-      };
-    }
-    
-    // Otherwise, get an authenticated URL from Firebase Storage
+    // Always try to get a fresh authenticated URL from Firebase Storage
     try {
-      const storageRef = ref(storage, `${user.uid}/cvs/${cvName}.pdf`);
+      const pdfFileName = encodeURIComponent(cvName).replace(/%20/g, '%20');
+      const storagePath = `${user.uid}/cvs/${pdfFileName}.pdf`;
+      console.log("Trying to get authenticated URL for:", storagePath);
       
-      // Add timeout to avoid hanging
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Timeout getting download URL")), 10000);
-      });
+      const storageRef = ref(storage, storagePath);
+      const authenticatedUrl = await getDownloadURL(storageRef);
       
-      const urlPromise = getDownloadURL(storageRef);
-      
-      // Race between the download URL request and timeout
-      const authenticatedUrl = await Promise.race([urlPromise, timeoutPromise]) as string;
-      
+      console.log("Retrieved fresh authenticated URL:", authenticatedUrl);
       return {
         success: true,
         pdfPath: authenticatedUrl
       };
     } catch (storageError) {
-      console.error("Error getting authenticated download URL:", storageError);
+      console.error("Error getting fresh authenticated URL, falling back to API response:", storageError);
+      
+      // Fallback to the URL from the API response
+      if (data.pdfUrl || data.pdf_url) {
+        return {
+          success: true,
+          pdfPath: data.pdfUrl || data.pdf_url
+        };
+      }
+      
       throw new Error("Impossible d'accéder au PDF généré");
     }
   } catch (error) {

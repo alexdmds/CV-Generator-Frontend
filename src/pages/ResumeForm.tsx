@@ -7,7 +7,7 @@ import { useResumeForm } from "@/hooks/useResumeForm";
 import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
 import { GenerateConfirmDialog } from "@/components/resume/components/GenerateConfirmDialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useEffect } from "react";
 
 const ResumeForm = () => {
@@ -93,39 +93,21 @@ const ResumeForm = () => {
         {(isLoading || pdfUrl) ? (
           <div className="w-full max-w-2xl mx-auto">
             {isLoading && !pdfUrl && (
-              <div className="text-center mb-6">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-medium text-gray-900">
-                  {isGenerating ? "Génération du CV en cours..." : "Recherche du CV existant..."}
-                </h3>
-                <p className="text-sm text-gray-500 mt-2">
-                  {isGenerating 
-                    ? "Le processus peut prendre jusqu'à 1 minute." 
-                    : "Vérification si un CV existe déjà avec ce nom..."}
-                </p>
-                
-                {isChecking && !isGenerating && (
-                  <Button
-                    variant="outline"
-                    onClick={retryCheckForExistingCV}
-                    className="mt-4"
-                    disabled={!checkFailed}
-                  >
-                    <RefreshCcw className="h-4 w-4 mr-2" />
-                    Réessayer
-                  </Button>
-                )}
-              </div>
+              <ProfileGeneratingIndicator 
+                message={isGenerating ? "Génération du CV en cours..." : "Recherche du CV existant..."}
+              />
             )}
             
             {pdfUrl && (
               <div className="mt-8">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Votre CV est prêt !</h3>
-                <iframe 
-                  src={pdfUrl}
-                  className="w-full h-[70vh] border border-gray-300 rounded-md"
-                  title="CV généré"
-                />
+                <div className="rounded-md overflow-hidden border border-gray-300">
+                  <iframe 
+                    src={pdfUrl}
+                    className="w-full h-[70vh]"
+                    title="CV généré"
+                  />
+                </div>
                 <div className="mt-4 flex justify-center space-x-4">
                   <Button 
                     variant="outline" 

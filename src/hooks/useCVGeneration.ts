@@ -9,6 +9,7 @@ export function useCVGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -28,6 +29,7 @@ export function useCVGeneration() {
 
       // Set checking state
       setIsChecking(true);
+      setCheckFailed(false);
       
       console.log(`Checking for existing CV: ${cvName}`);
 
@@ -66,6 +68,7 @@ export function useCVGeneration() {
         return await Promise.race([checkPromise, timeoutPromise]);
       } catch (timeoutError) {
         console.error("Checking for existing CV timed out:", timeoutError);
+        setCheckFailed(true);
         if (showToast) {
           toast({
             title: "Recherche expirée",
@@ -77,6 +80,7 @@ export function useCVGeneration() {
       }
     } catch (error) {
       console.error("Error checking for existing CV:", error);
+      setCheckFailed(true);
       return false;
     } finally {
       setIsChecking(false);
@@ -138,6 +142,7 @@ export function useCVGeneration() {
     isGenerating,
     isChecking,
     pdfUrl,
+    checkFailed,
     generateCV,
     checkExistingCVAndDisplay
   };

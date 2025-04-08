@@ -22,7 +22,12 @@ export function useCVInitialization() {
   const [isCheckingInProgress, setIsCheckingInProgress] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
   
-  const { checkExistingCVAndDisplay, getImmediatePdfUrl, setPdfUrl } = useCVGeneration();
+  // Now this properly includes setPdfUrl from the useCVGeneration hook
+  const { 
+    checkExistingCVAndDisplay, 
+    getImmediatePdfUrl, 
+    setPdfUrl 
+  } = useCVGeneration();
   
   // Get initial CV name from URL if present
   useEffect(() => {
@@ -84,7 +89,7 @@ export function useCVInitialization() {
       setCheckFailed(true);
       setIsCheckingInProgress(false);
     }
-  }, [checkExistingCVAndDisplay, getDirectPdfUrl, setPdfUrl, isCheckingInProgress]);
+  }, [checkExistingCVAndDisplay, getImmediatePdfUrl, setPdfUrl, isCheckingInProgress]);
   
   // Function to retry checking if the first attempt failed
   const retryCheckForExistingCV = useCallback(() => {

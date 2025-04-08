@@ -13,7 +13,8 @@ export function useCVGeneration() {
     getImmediatePdfUrl,
     loadCVPdf,
     handleLoadError,
-    resetLoading
+    resetLoading,
+    setPdfUrl // Explicitly include setPdfUrl from usePdfViewer
   } = usePdfViewer();
   
   const {
@@ -39,6 +40,7 @@ export function useCVGeneration() {
     
     // PDF data
     pdfUrl,
+    setPdfUrl, // Expose setPdfUrl to consuming components
     
     // Actions
     generateCV,

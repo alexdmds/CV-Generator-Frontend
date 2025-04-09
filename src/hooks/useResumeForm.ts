@@ -49,7 +49,8 @@ export function useResumeForm() {
     generateCV,
     checkExistingCVAndDisplay,
     loadKnownPdf,
-    getImmediatePdfUrl
+    getImmediatePdfUrl,
+    refreshPdfDisplay
   } = useCVGeneration();
   
   // Get initial CV name from URL if present
@@ -230,6 +231,7 @@ export function useResumeForm() {
     setHasCheckedForExistingCV,
     isCheckingInProgress,
     checkFailed,
-    retryCheckForExistingCV
+    retryCheckForExistingCV,
+    refreshPdfDisplay
   };
 }

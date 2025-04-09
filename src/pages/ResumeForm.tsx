@@ -8,9 +8,8 @@ import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
 import { GenerateConfirmDialog } from "@/components/resume/components/GenerateConfirmDialog";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
-import { useEffect } from "react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useCallback } from "react";
+import { auth } from "@/components/auth/firebase-config";
 
 const ResumeForm = () => {
   const {
@@ -37,7 +36,8 @@ const ResumeForm = () => {
     setHasCheckedForExistingCV,
     isCheckingInProgress,
     checkFailed,
-    retryCheckForExistingCV
+    retryCheckForExistingCV,
+    refreshPdfDisplay
   } = useResumeForm();
 
   // On vérifie l'existence du CV en arrière-plan, sans bloquer l'interface
@@ -47,6 +47,14 @@ const ResumeForm = () => {
       checkForExistingCV(cvName);
     }
   }, [cvName, checkForExistingCV, hasCheckedForExistingCV, isCheckingInProgress]);
+
+  // Fonction pour forcer le rafraîchissement du PDF
+  const handleRefreshPdf = useCallback(() => {
+    const user = auth.currentUser;
+    if (user && cvName) {
+      refreshPdfDisplay(user.uid, cvName);
+    }
+  }, [cvName, refreshPdfDisplay]);
 
   const handleCreateClick = async () => {
     await handleCreateNewCV();
@@ -119,6 +127,17 @@ const ResumeForm = () => {
                       Chargement...
                     </div>
                   )}
+                  {!isChecking && pdfUrl && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRefreshPdf}
+                      className="flex items-center"
+                    >
+                      <RefreshCcw className="w-4 h-4 mr-2" />
+                      Rafraîchir
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -134,18 +153,26 @@ const ResumeForm = () => {
                       src={pdfUrl}
                       className="w-full h-[500px]"
                       title="CV généré"
+                      key={pdfUrl} // Forcer la réinitialisation de l'iframe quand l'URL change
                       onError={() => {
                         console.error("Failed to load PDF, setting checkFailed to true");
                         retryCheckForExistingCV();
                       }}
                     />
-                    <div className="mt-4 flex justify-center">
+                    <div className="mt-4 flex justify-center space-x-4">
                       <Button 
                         variant="default" 
                         onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
                       >
                         <FileText className="w-4 h-4 mr-2" />
-                        Télécharger le PDF
+                        Voir le PDF
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleRefreshPdf}
+                      >
+                        <RefreshCcw className="w-4 h-4 mr-2" />
+                        Rafraîchir
                       </Button>
                     </div>
                   </div>
@@ -155,7 +182,7 @@ const ResumeForm = () => {
                       <FileX className="w-16 h-16 text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900">CV pas encore généré</h3>
                       <p className="text-gray-500 mt-2">
-                        Aucun CV n'a encore été généré avec ce nom.
+                        Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible.
                       </p>
                       {checkFailed && (
                         <Button 

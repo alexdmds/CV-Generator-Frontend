@@ -10,6 +10,7 @@ export function useCVGeneration() {
   const [isChecking, setIsChecking] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [checkFailed, setCheckFailed] = useState(false);
+  const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -72,6 +73,15 @@ export function useCVGeneration() {
     }
   };
 
+  // Forcer le rafraîchissement de l'affichage du PDF
+  const refreshPdfDisplay = (userId: string, cvName: string) => {
+    const refreshedUrl = getImmediatePdfUrl(userId, cvName) + `?t=${Date.now()}`;
+    console.log("Refreshing PDF display with URL:", refreshedUrl);
+    setPdfUrl(refreshedUrl);
+    setLastGenerationTime(Date.now());
+    return refreshedUrl;
+  };
+
   // Charger directement un PDF connu sans vérification
   const loadKnownPdf = (userId: string, cvName: string): boolean => {
     if (!userId || !cvName) return false;
@@ -111,7 +121,8 @@ export function useCVGeneration() {
       const result = await generateCVApi(user, cvName);
 
       if (result.success && result.pdfPath) {
-        setPdfUrl(result.pdfPath);
+        // Ajouter un paramètre timestamp pour forcer le rafraîchissement du cache
+        const refreshedUrl = refreshPdfDisplay(user.uid, cvName);
         
         toast({
           title: "Succès !",
@@ -140,9 +151,12 @@ export function useCVGeneration() {
     isChecking,
     pdfUrl,
     checkFailed,
+    lastGenerationTime,
+    setPdfUrl,
     generateCV,
     checkExistingCVAndDisplay,
     loadKnownPdf,
-    getImmediatePdfUrl
+    getImmediatePdfUrl,
+    refreshPdfDisplay
   };
 }

@@ -4,19 +4,26 @@ import { ArrowLeft } from "lucide-react";
 
 interface BackToResumesButtonProps {
   onClick: () => void;
-  disabled: boolean;
+  disabled?: boolean;
+  className?: string;
+  children?: React.ReactNode;
 }
 
-export function BackToResumesButton({ onClick, disabled }: BackToResumesButtonProps) {
+export function BackToResumesButton({ 
+  onClick, 
+  disabled = false,
+  className = "mb-6",
+  children = "Retour aux CVs"
+}: BackToResumesButtonProps) {
   return (
     <Button
       variant="ghost"
       onClick={onClick}
-      className="mb-6 flex items-center gap-2"
+      className={`flex items-center gap-2 ${className}`}
       disabled={disabled}
     >
       <ArrowLeft className="w-4 h-4" />
-      Retour aux CVs
+      {children}
     </Button>
   );
 }

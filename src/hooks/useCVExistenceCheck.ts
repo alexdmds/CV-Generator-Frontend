@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/components/auth/firebase-config";
-import { checkExistingCV } from "@/utils/apiService";
+import { getDirectPdfUrl } from "@/utils/apiService";
 
 export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
   const [isChecking, setIsChecking] = useState(false);

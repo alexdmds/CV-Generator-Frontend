@@ -2,7 +2,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useCVData } from "./useCVData";
-import { auth } from "@/components/auth/firebase-config";
 
 export function useCVInitialization() {
   const { 
@@ -43,12 +42,11 @@ export function useCVInitialization() {
   }, [cvName]);
 
   // Function to retry checking if the first attempt failed
-  const retryCheckForExistingCV = useCallback(() => {
-    if (cvName) {
-      setHasCheckedForExistingCV(false);
-      setCheckFailed(false);
-    }
-  }, [cvName]);
+  const retryCheckForExistingCV = useCallback((cvName: string) => {
+    setHasCheckedForExistingCV(false);
+    setCheckFailed(false);
+    return true;
+  }, []);
 
   return {
     hasCheckedForExistingCV,

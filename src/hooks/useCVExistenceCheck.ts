@@ -77,9 +77,3 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
     retryCheckForExistingCV
   };
 }
-
-// Helper function to get direct PDF URL
-function getDirectPdfUrl(userId: string, cvName: string): string {
-  const encodedName = encodeURIComponent(cvName);
-  return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
-}

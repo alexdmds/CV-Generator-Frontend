@@ -12,7 +12,7 @@ interface CVPreviewPanelProps {
   pdfUrl: string | null;
   cvName: string;
   checkFailed: boolean;
-  retryCheckForExistingCV: () => void;
+  retryCheckForExistingCV: (cvName: string) => void;
   refreshPdfDisplay: (userId: string, cvName: string) => string;
 }
 
@@ -25,13 +25,18 @@ export function CVPreviewPanel({
   retryCheckForExistingCV,
   refreshPdfDisplay
 }: CVPreviewPanelProps) {
-  // Fonction pour forcer le rafraîchissement du PDF
+  // Function to force PDF refresh
   const handleRefreshPdf = useCallback(() => {
     const user = auth.currentUser;
     if (user && cvName) {
       refreshPdfDisplay(user.uid, cvName);
     }
   }, [cvName, refreshPdfDisplay]);
+
+  // Function to handle retry
+  const handleRetry = useCallback(() => {
+    retryCheckForExistingCV(cvName);
+  }, [retryCheckForExistingCV, cvName]);
 
   return (
     <Card>
@@ -70,10 +75,10 @@ export function CVPreviewPanel({
               src={pdfUrl}
               className="w-full h-[500px]"
               title="CV généré"
-              key={pdfUrl} // Forcer la réinitialisation de l'iframe quand l'URL change
+              key={pdfUrl} // Force iframe reset when URL changes
               onError={() => {
                 console.error("Failed to load PDF, setting checkFailed to true");
-                retryCheckForExistingCV();
+                handleRetry();
               }}
             />
             <div className="mt-4 flex justify-center space-x-4">
@@ -104,7 +109,7 @@ export function CVPreviewPanel({
               {checkFailed && (
                 <Button 
                   variant="outline" 
-                  onClick={retryCheckForExistingCV}
+                  onClick={handleRetry}
                   className="mt-4 flex items-center"
                   size="sm"
                 >

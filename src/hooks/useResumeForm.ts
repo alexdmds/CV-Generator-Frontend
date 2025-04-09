@@ -58,7 +58,7 @@ export function useResumeForm() {
     try {
       console.log(`Starting non-blocking CV check for: ${name}`);
       
-      // Définir immédiatement une URL candidate pour le PDF
+      // Set immediate candidate URL for PDF
       const checkResult = await checkExistingCVAndDisplay(name, false);
       setCheckFailed(!checkResult);
       
@@ -71,7 +71,7 @@ export function useResumeForm() {
     }
   };
   
-  // Vérification non bloquante du CV existant
+  // Non-blocking verification of existing CV
   useEffect(() => {
     if (cvName && !hasCheckedForExistingCV && !isCheckingInProgress) {
       console.log(`Checking for existing CV on component mount in background: ${cvName}`);
@@ -79,15 +79,20 @@ export function useResumeForm() {
     }
   }, [cvName, hasCheckedForExistingCV, isCheckingInProgress]);
   
-  // For convenience, create wrapper functions
+  // Wrapper functions for convenience
   const handleGenerateResume = () => openConfirmDialog();
   const handleSaveJobDescription = () => handleSaveJobDescriptionWithState(true);
+  const doRetryCheckForExistingCV = () => {
+    if (cvName) {
+      return retryCheckForExistingCV(cvName);
+    }
+    return false;
+  };
 
   return {
     jobDescription,
     setJobDescription,
     cvNameDialogOpen,
-    setCvNameDialogOpen,
     handleDialogOpenChange,
     cvName,
     setCvName,
@@ -105,10 +110,9 @@ export function useResumeForm() {
     pdfUrl,
     checkForExistingCV,
     hasCheckedForExistingCV,
-    setHasCheckedForExistingCV,
     isCheckingInProgress,
     checkFailed,
-    retryCheckForExistingCV,
+    retryCheckForExistingCV: doRetryCheckForExistingCV,
     refreshPdfDisplay
   };
 }

@@ -4,7 +4,7 @@ import { ProfileHeader } from "./ProfileHeader";
 import { ProfileTabs } from "./ProfileTabs";
 import { ProfileLoadingState } from "./ProfileLoadingState";
 import { ProfileEmptyState } from "./ProfileEmptyState";
-import { useProfileData } from "@/hooks/useProfileData";
+import { useProfileData } from "@/hooks/profile";
 
 export const ProfileView = () => {
   const {

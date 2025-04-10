@@ -1,33 +1,95 @@
 
-import { CV, Profile } from "@/types/profile";
+import { Profile, CV, CVData, CVEducation, CVExperience, Language, Skill } from "@/types/profile";
 
-/**
- * Creates a new CV object with the required structure
- */
-export const createCVObject = (cvName: string, jobDescription: string, userProfile: Partial<Profile> = {}): CV => {
-  console.log("Creating new CV object with name:", cvName);
+export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: string, language: string = "français"): CV => {
+  // Transform educations
+  const educations = profile.educations.map(edu => ({
+    title: edu.title,
+    description: edu.full_descriptions,
+    dates: edu.dates,
+    university: edu.university,
+    location: "" // This field needs to be filled by user
+  }));
+
+  // Transform experiences
+  const experiences = profile.experiences.map(exp => ({
+    company: exp.company,
+    title: exp.title,
+    bullets: exp.full_descriptions.split("\n").filter(bullet => bullet.trim() !== ""), // Split by newlines to create bullets
+    dates: exp.dates,
+    location: exp.location
+  }));
+
+  // Create section names based on language
+  const sections_name = {
+    experience_section_name: language === "français" ? "Expérience professionnelle" : "Professional experience",
+    hobbies_section_name: language === "français" ? "Centres d'intérêt" : "Hobbies",
+    languages_section_name: language === "français" ? "Langues" : "Languages",
+    skills_section_name: language === "français" ? "Compétences" : "Skills",
+    education_section_name: language === "français" ? "Formation" : "Education"
+  };
+
+  // Parse languages
+  const languageList: Language[] = parseLanguages(profile.languages);
   
+  // Parse skills
+  const skillsList: Skill[] = parseSkills(profile.skills);
+
+  // Create CV data
+  const cvData: CVData = {
+    educations,
+    lang_of_cv: language,
+    hobbies: profile.hobbies,
+    languages: languageList,
+    phone: profile.head.phone,
+    mail: profile.head.mail,
+    title: profile.head.title,
+    sections_name,
+    skills: skillsList,
+    experiences,
+    name: profile.head.name
+  };
+
   return {
-    job_raw: jobDescription,
+    job_raw: jobRaw,
     cv_name: cvName,
-    cv_data: {
-      educations: [],
-      lang_of_cv: "français",
-      hobbies: userProfile.hobbies || "",
-      languages: [],
-      phone: userProfile.head?.phone || "",
-      mail: userProfile.head?.mail || "",
-      title: userProfile.head?.title || "",
-      sections_name: {
-        experience_section_name: "Expérience professionnelle",
-        Hobbies_section: "Centres d'intérêt",
-        languages_section_name: "Langues",
-        skills_section_name: "Compétences",
-        education_section_name: "Formation"
-      },
-      skills: [],
-      experiences: [],
-      name: userProfile.head?.name || ""
-    }
+    cv_data: cvData
   };
 };
+
+// Helper functions for parsing strings into structured data
+function parseLanguages(languagesString: string): Language[] {
+  if (!languagesString || languagesString.trim() === "") {
+    return [];
+  }
+  
+  // Simple parsing: one language per line, with format "Language: Level"
+  const lines = languagesString.split("\n").filter(line => line.trim() !== "");
+  
+  return lines.map(line => {
+    const parts = line.split(":");
+    if (parts.length > 1) {
+      return {
+        language: parts[0].trim(),
+        level: parts.slice(1).join(":").trim()
+      };
+    } else {
+      return {
+        language: line.trim(),
+        level: ""
+      };
+    }
+  });
+}
+
+function parseSkills(skillsString: string): Skill[] {
+  if (!skillsString || skillsString.trim() === "") {
+    return [];
+  }
+  
+  // For simplicity, we'll just create one category with all skills
+  return [{
+    category_name: "Compétences techniques",
+    skills: skillsString
+  }];
+}

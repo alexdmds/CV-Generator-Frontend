@@ -2,7 +2,7 @@
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/components/auth/firebase-config";
 import { CV, Profile } from "@/types/profile";
-import { createCVObject } from "./cvFactory";
+import { createCVFromProfile } from "./cvFactory";
 
 interface ToastFunction {
   (props: { 
@@ -92,7 +92,7 @@ export const saveCVToFirestore = async ({
     console.log("User profile retrieved for CV:", userProfile);
     
     // Create a new CV object with required structure
-    const newCV = createCVObject(cvName, jobDescription, userProfile);
+    const newCV = createCVFromProfile(userProfile as Profile, jobDescription, cvName);
     console.log("New CV object created:", newCV);
     
     // Get user document to check if it exists

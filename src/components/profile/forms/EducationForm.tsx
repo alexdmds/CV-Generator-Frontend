@@ -46,7 +46,7 @@ export const EducationForm = ({
       title: "",
       university: "",
       dates: "",
-      full_description: ""
+      full_descriptions: ""
     }]);
   };
 
@@ -124,8 +124,8 @@ export const EducationForm = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Textarea 
-              value={education.full_description} 
-              onChange={(e) => updateEducation(index, 'full_description', e.target.value)}
+              value={education.full_descriptions} 
+              onChange={(e) => updateEducation(index, 'full_descriptions', e.target.value)}
               placeholder="Description du programme et des acquis"
               rows={4}
               className={savedSections ? savedAnimation : savedFieldStyle}

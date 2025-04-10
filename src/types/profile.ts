@@ -19,7 +19,7 @@ export interface Education {
   title: string;
   university: string;
   dates: string;
-  full_description: string;
+  full_descriptions: string;
 }
 
 export interface Language {
@@ -60,7 +60,7 @@ export interface CVExperience {
 
 export interface CVSectionNames {
   experience_section_name: string;
-  Hobbies_section: string;
+  hobbies_section_name: string;
   languages_section_name: string;
   skills_section_name: string;
   education_section_name: string;

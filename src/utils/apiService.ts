@@ -15,6 +15,7 @@ interface GenerateCVResponse {
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
   // Utiliser la structure directe du bucket public
   const encodedName = encodeURIComponent(cvName);
+  // On ne peut pas accéder directement au fichier, donc on prévoit une URL qui sera vérifiée par l'iframe
   return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
 };
 

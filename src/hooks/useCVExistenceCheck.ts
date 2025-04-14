@@ -27,18 +27,20 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
         return false;
       }
 
-      // Get direct URL immediately
+      // Mettre l'URL directe dans l'état, mais considérer qu'elle pourrait ne pas fonctionner
+      // L'erreur sera gérée par l'iframe avec le composant onError
       const immediateUrl = getDirectPdfUrl(user.uid, cvName);
+      console.log("Setting potential PDF URL:", immediateUrl);
       setPdfUrl(immediateUrl);
       
-      // Mark background check as started
+      // Marquer la vérification comme démarrée
       setIsChecking(true);
       setCheckFailed(false);
       
       console.log(`Checking for existing CV in background: ${cvName}`);
 
-      // Nous assumons que le CV n'existe pas encore, sa génération sera confirmée par l'utilisateur
-      // en cliquant sur le bouton "Générer mon CV"
+      // Nous assumons que le CV n'existe pas encore, sa génération sera confirmée
+      // soit par l'affichage réussi, soit par l'utilisateur cliquant sur "Générer mon CV"
       setTimeout(() => {
         setIsChecking(false);
         

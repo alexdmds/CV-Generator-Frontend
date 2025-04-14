@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, RefreshCcw, FileX } from "lucide-react";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { auth } from "@/components/auth/firebase-config";
 
 interface CVPreviewPanelProps {
@@ -25,17 +25,21 @@ export function CVPreviewPanel({
   retryCheckForExistingCV,
   refreshPdfDisplay
 }: CVPreviewPanelProps) {
+  const [iframeError, setIframeError] = useState(false);
+  
   // Function to force PDF refresh
   const handleRefreshPdf = useCallback(() => {
     const user = auth.currentUser;
     if (user && cvName) {
       refreshPdfDisplay(user.uid, cvName);
+      setIframeError(false); // Reset error state on refresh
     }
   }, [cvName, refreshPdfDisplay]);
 
   // Function to handle retry
   const handleRetry = useCallback(() => {
     retryCheckForExistingCV(cvName);
+    setIframeError(false);
   }, [retryCheckForExistingCV, cvName]);
 
   return (
@@ -49,7 +53,7 @@ export function CVPreviewPanel({
               Chargement...
             </div>
           )}
-          {!isChecking && pdfUrl && (
+          {!isChecking && pdfUrl && !iframeError && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -69,7 +73,7 @@ export function CVPreviewPanel({
               message="Génération du CV en cours..."
             />
           </div>
-        ) : pdfUrl ? (
+        ) : pdfUrl && !iframeError ? (
           <div className="rounded-md overflow-hidden border border-gray-300">
             <iframe 
               src={pdfUrl}
@@ -77,8 +81,8 @@ export function CVPreviewPanel({
               title="CV généré"
               key={pdfUrl} // Force iframe reset when URL changes
               onError={() => {
-                console.error("Failed to load PDF, setting checkFailed to true");
-                handleRetry();
+                console.error("Failed to load PDF, setting error state");
+                setIframeError(true);
               }}
             />
             <div className="mt-4 flex justify-center space-x-4">
@@ -106,7 +110,7 @@ export function CVPreviewPanel({
               <p className="text-gray-500 mt-2">
                 Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible.
               </p>
-              {checkFailed && (
+              {(checkFailed || iframeError) && (
                 <Button 
                   variant="outline" 
                   onClick={handleRetry}

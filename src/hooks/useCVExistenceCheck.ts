@@ -33,14 +33,16 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
       
       console.log(`Checking for existing CV in background: ${cvName}`);
       
-      // Au lieu de vérifier l'existence du fichier, on définit simplement l'URL potentielle
+      // On définit l'URL du PDF directement
       const potentialUrl = getDirectPdfUrl(user.uid, cvName);
       console.log("Setting potential PDF URL:", potentialUrl);
       
-      // On définit l'URL et laisse le composant CVPreviewPanel gérer l'affichage
+      // On définit l'URL sans vérification - nous supposons que le PDF existe
+      // C'est le composant CVPreviewPanel qui va gérer l'affichage conditionnel
       setPdfUrl(potentialUrl);
       
-      // Terminer la vérification après un court délai
+      // On considère que la vérification a réussi par défaut
+      // Le composant CVPreviewPanel va gérer l'affichage approprié
       setTimeout(() => {
         setIsChecking(false);
         
@@ -50,7 +52,7 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
             description: "L'aperçu du CV s'affichera s'il existe.",
           });
         }
-      }, 1000);
+      }, 500);
       
       return true;
     } catch (error) {
@@ -70,7 +72,7 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
     } finally {
       setTimeout(() => {
         setIsChecking(false);
-      }, 1000);
+      }, 500);
     }
   };
 

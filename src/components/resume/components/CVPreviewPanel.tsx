@@ -27,15 +27,16 @@ export function CVPreviewPanel({
   refreshPdfDisplay
 }: CVPreviewPanelProps) {
   const [pdfLoaded, setPdfLoaded] = useState(false);
-  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
   const [loadAttempted, setLoadAttempted] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const timeoutRef = useRef<number | null>(null);
   
   // Reset states when URL changes
   useEffect(() => {
     if (pdfUrl) {
       setPdfLoaded(false);
-      setShowPdfViewer(false);
+      setPdfError(false);
       setLoadAttempted(false);
     }
   }, [pdfUrl]);
@@ -46,7 +47,7 @@ export function CVPreviewPanel({
     if (user && cvName) {
       refreshPdfDisplay(user.uid, cvName);
       setPdfLoaded(false);
-      setShowPdfViewer(false);
+      setPdfError(false);
       setLoadAttempted(false);
     }
   }, [cvName, refreshPdfDisplay]);
@@ -55,51 +56,81 @@ export function CVPreviewPanel({
   const handleRetry = useCallback(() => {
     retryCheckForExistingCV(cvName);
     setPdfLoaded(false);
-    setShowPdfViewer(false);
+    setPdfError(false);
     setLoadAttempted(false);
   }, [retryCheckForExistingCV, cvName]);
 
-  // Try to load the PDF in a hidden iframe first to check if it exists
+  // Fetch the PDF using a HEAD request to check if it exists
   useEffect(() => {
-    if (pdfUrl && !loadAttempted) {
+    if (pdfUrl && !loadAttempted && !isGenerating) {
       setLoadAttempted(true);
       
-      // Create a temporary iframe to test loading
-      const testIframe = document.createElement('iframe');
-      testIframe.style.display = 'none';
-      testIframe.src = pdfUrl;
-      document.body.appendChild(testIframe);
+      // Set a timeout to consider the PDF as unavailable after 5 seconds
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
       
-      // Set a timeout to check if the PDF loaded successfully
-      const timer = setTimeout(() => {
-        try {
-          // Try to access content - this will fail with CORS if the PDF exists
-          // But we can catch the error if the iframe loads at all
-          if (testIframe.contentWindow) {
-            // If we can access contentWindow, PDF might exist
-            setShowPdfViewer(true);
+      timeoutRef.current = window.setTimeout(() => {
+        if (!pdfLoaded) {
+          console.log("PDF load timeout, considering as error");
+          setPdfError(true);
+        }
+      }, 5000);
+      
+      // Check if the PDF exists by making a HEAD request
+      fetch(pdfUrl, { method: 'HEAD' })
+        .then(response => {
+          if (response.ok) {
+            // Le PDF existe et est accessible
+            setPdfError(false);
+          } else {
+            // Le PDF n'existe pas ou n'est pas accessible
+            console.log("PDF not found or not accessible:", response.status);
+            setPdfError(true);
           }
-        } catch (e) {
-          // If we get an error about CORS, it means the PDF exists
-          setShowPdfViewer(true);
-        } finally {
-          // Clean up the test iframe
-          document.body.removeChild(testIframe);
-        }
-      }, 1000);
-      
-      return () => {
-        clearTimeout(timer);
-        if (document.body.contains(testIframe)) {
-          document.body.removeChild(testIframe);
-        }
-      };
+        })
+        .catch(error => {
+          // Une erreur s'est produite lors de la vérification
+          console.error("Error checking PDF existence:", error);
+          setPdfError(true);
+        });
     }
-  }, [pdfUrl, loadAttempted]);
+    
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [pdfUrl, loadAttempted, pdfLoaded, isGenerating]);
 
   // Handle actual iframe load event
   const handleIframeLoad = useCallback(() => {
     setPdfLoaded(true);
+    setPdfError(false);
+    
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Vérifier si l'iframe a chargé un contenu valide
+    try {
+      const iframe = iframeRef.current;
+      if (iframe && iframe.contentWindow) {
+        // Si on peut accéder à contentWindow sans erreur, c'est bon signe
+        // Mais cela ne garantit pas que le PDF est correctement chargé
+        console.log("PDF iframe loaded successfully");
+      }
+    } catch (e) {
+      // Une erreur CORS peut se produire ici même si le PDF existe
+      console.log("PDF might exist but caused a CORS error, consider it loaded");
+    }
+  }, []);
+
+  // Handle iframe error
+  const handleIframeError = useCallback(() => {
+    console.error("PDF iframe failed to load");
+    setPdfError(true);
   }, []);
 
   // Open PDF in new tab
@@ -120,7 +151,7 @@ export function CVPreviewPanel({
               Chargement...
             </div>
           )}
-          {!isChecking && pdfUrl && pdfLoaded && showPdfViewer && (
+          {!isChecking && pdfUrl && pdfLoaded && !pdfError && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -140,7 +171,7 @@ export function CVPreviewPanel({
               message="Génération du CV en cours..."
             />
           </div>
-        ) : pdfUrl && showPdfViewer ? (
+        ) : pdfUrl && !pdfError ? (
           <div className="rounded-md overflow-hidden border border-gray-300 relative">
             {/* Loading indicator for PDF */}
             {!pdfLoaded && (
@@ -158,6 +189,7 @@ export function CVPreviewPanel({
                 title="CV généré"
                 key={pdfUrl} // Force iframe reset when URL changes
                 onLoad={handleIframeLoad}
+                onError={handleIframeError}
                 sandbox="allow-same-origin allow-scripts"
               />
               
@@ -174,6 +206,7 @@ export function CVPreviewPanel({
               <Button 
                 variant="default" 
                 onClick={handleOpenPdf}
+                disabled={!pdfLoaded}
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Voir le PDF

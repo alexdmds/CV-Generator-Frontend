@@ -5,6 +5,7 @@ import { Loader2, FileText, RefreshCcw, FileX } from "lucide-react";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { auth } from "@/components/auth/firebase-config";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CVPreviewPanelProps {
   isGenerating: boolean;
@@ -28,6 +29,7 @@ export function CVPreviewPanel({
   const [iframeError, setIframeError] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeLoadAttempted, setIframeLoadAttempted] = useState(false);
+  const [isErrorContentVisible, setIsErrorContentVisible] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
   // Reset iframe states when URL changes
@@ -36,6 +38,7 @@ export function CVPreviewPanel({
       setIframeError(false);
       setIframeLoaded(false);
       setIframeLoadAttempted(false);
+      setIsErrorContentVisible(false);
     }
   }, [pdfUrl]);
   
@@ -47,6 +50,7 @@ export function CVPreviewPanel({
       setIframeError(false);
       setIframeLoaded(false);
       setIframeLoadAttempted(false);
+      setIsErrorContentVisible(false);
     }
   }, [cvName, refreshPdfDisplay]);
 
@@ -56,6 +60,7 @@ export function CVPreviewPanel({
     setIframeError(false);
     setIframeLoaded(false);
     setIframeLoadAttempted(false);
+    setIsErrorContentVisible(false);
   }, [retryCheckForExistingCV, cvName]);
 
   // Detect iframe errors with fallback for cases where onError doesn't fire
@@ -63,32 +68,52 @@ export function CVPreviewPanel({
     if (pdfUrl && !iframeLoaded && !iframeError) {
       setIframeLoadAttempted(true);
       
-      // Set a timeout to check if iframe loaded correctly
+      // Set a shorter timeout to check if iframe loaded correctly
       const timer = setTimeout(() => {
         if (!iframeLoaded) {
           console.log("PDF load timeout - assuming error occurred");
           setIframeError(true);
         }
-      }, 3000);
+      }, 2000);
       
       return () => clearTimeout(timer);
     }
   }, [pdfUrl, iframeLoaded, iframeError]);
 
+  // Monitor iframe content for error messages
+  useEffect(() => {
+    if (iframeRef.current && pdfUrl) {
+      // Check for error content after a short delay
+      const timer = setTimeout(() => {
+        try {
+          // Since we can't access iframe content directly due to CORS, we rely on
+          // the error handler and timeout to detect errors
+          if (!iframeLoaded && iframeLoadAttempted) {
+            setIframeError(true);
+          }
+        } catch (error) {
+          console.error("Error monitoring iframe content:", error);
+          setIframeError(true);
+        }
+      }, 1500); // Short timeout to detect errors quickly
+      
+      return () => clearTimeout(timer);
+    }
+  }, [pdfUrl, iframeLoadAttempted, iframeLoaded]);
+
   // Function to handle iframe load event
   const handleIframeLoad = useCallback(() => {
     console.log("PDF iframe triggered onLoad event");
     
-    // Check if the iframe contains an error message
-    try {
-      // Since we can't access iframe content due to CORS, we assume it's loaded
-      // But we'll hide it if it shows an error message visually
-      setIframeLoaded(true);
-    } catch (error) {
-      console.error("Error checking iframe content:", error);
-      setIframeError(true);
-    }
-  }, []);
+    // Check if there might be an error (we can't access content due to CORS)
+    // but we can delay showing content to see if errors appear
+    setTimeout(() => {
+      // If no error was detected during this time, consider it loaded successfully
+      if (!iframeError) {
+        setIframeLoaded(true);
+      }
+    }, 500);
+  }, [iframeError]);
 
   // Function to handle iframe error event
   const handleIframeError = useCallback(() => {
@@ -137,8 +162,8 @@ export function CVPreviewPanel({
               </div>
             )}
             
-            {/* Hidden iframe to attempt loading the PDF - wrapped in error boundary */}
-            <div className={`${iframeLoaded ? 'block' : 'opacity-0'} w-full h-[500px]`}>
+            {/* Create a wrapper that only shows the iframe when it's successfully loaded */}
+            <div className={`${iframeLoaded ? 'block' : 'hidden'} w-full h-[500px]`}>
               {!iframeError && (
                 <iframe 
                   ref={iframeRef}
@@ -152,6 +177,13 @@ export function CVPreviewPanel({
                 />
               )}
             </div>
+            
+            {/* Explicitly show a loading indicator while trying to load */}
+            {!iframeLoaded && !iframeError && (
+              <div className="w-full h-[500px] flex flex-col items-center justify-center">
+                <Skeleton className="w-full h-full" />
+              </div>
+            )}
             
             {/* Actions for loaded PDF */}
             {iframeLoaded && !iframeError && (
@@ -180,7 +212,7 @@ export function CVPreviewPanel({
               <h3 className="text-lg font-medium text-gray-900">CV pas encore généré</h3>
               <p className="text-gray-500 mt-2">
                 {iframeLoadAttempted ? 
-                  "Le PDF n'a pas pu être chargé. Il est possible que le CV n'ait pas encore été généré." : 
+                  "Le PDF n'a pas pu être chargé. Il est possible que le CV n'ait pas encore été généré ou que vous n'ayez pas les permissions nécessaires." : 
                   "Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible."}
               </p>
               <Button 

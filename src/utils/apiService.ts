@@ -11,42 +11,11 @@ interface GenerateCVResponse {
   pdfPath?: string;
 }
 
-// Méthode pour obtenir l'URL directe sans passer par Firebase
+// Méthode simplifiée pour obtenir l'URL directe sans passer par Firebase
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
   // Utiliser la structure directe du bucket public
   const encodedName = encodeURIComponent(cvName);
-  return `https://storage.googleapis.com/cv-generator-447314.appspot.com/${userId}/cvs/${encodedName}.pdf`;
-};
-
-/**
- * Fonction fiable pour vérifier l'existence d'un CV en consultant Firestore uniquement
- * Évite les requêtes HEAD qui peuvent causer des problèmes CORS
- */
-export const checkCVExists = async (userId: string, cvName: string): Promise<boolean> => {
-  if (!userId || !cvName) return false;
-  
-  try {
-    console.log(`Vérification Firestore pour CV: ${cvName}`);
-    
-    // Vérifier via la base Firestore uniquement (plus fiable)
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      const cvs = userData.cvs || [];
-      
-      // Vérifier si un CV avec ce nom existe dans Firestore
-      const cvExists = cvs.some((cv: CV) => cv.cv_name === cvName);
-      console.log(`CV ${cvName} existe dans Firestore: ${cvExists}`);
-      return cvExists;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error("Erreur globale dans checkCVExists:", error);
-    return false;
-  }
+  return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
 };
 
 /**
@@ -58,17 +27,14 @@ export const checkExistingCV = async (
   cvName: string
 ): Promise<string | null> => {
   try {
-    // Utiliser la méthode basée sur Firestore uniquement
-    const exists = await checkCVExists(user.uid, cvName);
+    // Essayer directement l'URL publique
+    const directUrl = getDirectPdfUrl(user.uid, cvName);
+    console.log("Trying direct public URL first:", directUrl);
     
-    if (exists) {
-      const directUrl = getDirectPdfUrl(user.uid, cvName);
-      console.log("CV existe, retourne l'URL:", directUrl);
-      return directUrl;
-    } else {
-      console.log("CV n'existe pas selon la vérification");
-      return null;
-    }
+    // On ne fait pas de vérification d'existence, on suppose que le fichier existe
+    // et on laisse le navigateur gérer l'affichage d'erreur si nécessaire
+    return directUrl;
+    
   } catch (error) {
     console.error("Error checking for existing CV:", error);
     return null;
@@ -80,18 +46,8 @@ export const checkExistingCV = async (
  * Version non-bloquante limitée à une seule tentative rapide
  */
 export const getStoragePdfUrl = async (userId: string, cvName: string): Promise<string | null> => {
-  try {
-    const exists = await checkCVExists(userId, cvName);
-    
-    if (exists) {
-      return getDirectPdfUrl(userId, cvName);
-    } else {
-      return null;
-    }
-  } catch (error) {
-    console.error("Error getting PDF URL:", error);
-    return null;
-  }
+  // Renvoyer directement l'URL construite sans vérification
+  return getDirectPdfUrl(userId, cvName);
 };
 
 /**
@@ -122,7 +78,7 @@ export const generateCVApi = async (
     const data = await response.json();
     console.log("CV generation API response:", data);
     
-    // Utiliser directement l'URL construite
+    // Utiliser directement l'URL construite sans vérification
     const pdfUrl = getDirectPdfUrl(user.uid, cvName);
     
     return {

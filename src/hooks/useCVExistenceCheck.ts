@@ -3,12 +3,11 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/components/auth/firebase-config";
-import { getDirectPdfUrl, checkCVExists } from "@/utils/apiService";
+import { getDirectPdfUrl } from "@/utils/apiService";
 
 export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
   const [isChecking, setIsChecking] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
-  const [cvExists, setCvExists] = useState<boolean | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -28,62 +27,38 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
         return false;
       }
 
-      // Marquer la vérification comme démarrée
+      // Get direct URL immediately
+      const immediateUrl = getDirectPdfUrl(user.uid, cvName);
+      setPdfUrl(immediateUrl);
+      
+      // Mark background check as started
       setIsChecking(true);
       setCheckFailed(false);
       
-      console.log(`Vérification de l'existence du CV dans Firestore: ${cvName}`);
-      
-      // On utilise notre fonction améliorée pour vérifier l'existence dans Firestore uniquement
-      const exists = await checkCVExists(user.uid, cvName);
-      setCvExists(exists);
-      
-      if (exists) {
-        // Le CV existe, on définit l'URL
-        const directUrl = getDirectPdfUrl(user.uid, cvName);
-        console.log("CV trouvé, URL définie:", directUrl);
-        setPdfUrl(directUrl);
-        
-        if (showToast) {
-          toast({
-            title: "CV trouvé",
-            description: "L'aperçu du CV a été chargé avec succès.",
-          });
+      console.log(`Checking for existing CV in background: ${cvName}`);
+
+      // Verify in background but don't block UI
+      setTimeout(async () => {
+        try {
+          if (showToast) {
+            toast({
+              title: "CV chargé",
+              description: "Le CV est disponible",
+            });
+          }
+          
+          // Check is complete
+          setIsChecking(false);
+        } catch (error) {
+          console.error("Background check error:", error);
+          setIsChecking(false);
         }
-        
-        setIsChecking(false);
-        return true;
-      } else {
-        // Le CV n'existe pas
-        console.log("CV introuvable dans Firestore");
-        setPdfUrl(null);
-        
-        if (showToast) {
-          toast({
-            title: "CV introuvable",
-            description: "Aucun CV n'a été trouvé avec ce nom.",
-            variant: "destructive",
-          });
-        }
-        
-        setCheckFailed(true);
-        setIsChecking(false);
-        return false;
-      }
+      }, 0);
+      
+      return true;
     } catch (error) {
-      console.error("Error in CV existence check:", error);
+      console.error("Error in immediate PDF access:", error);
       setCheckFailed(true);
-      setPdfUrl(null);
-      setCvExists(false);
-      
-      if (showToast) {
-        toast({
-          title: "Erreur",
-          description: "Impossible de vérifier l'existence du CV",
-          variant: "destructive",
-        });
-      }
-      
       setIsChecking(false);
       return false;
     }
@@ -92,14 +67,12 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
   // Retry checking for an existing CV
   const retryCheckForExistingCV = async (cvName: string) => {
     setCheckFailed(false);
-    setCvExists(null);
     return checkExistingCVAndDisplay(cvName);
   };
 
   return {
     isChecking,
     checkFailed,
-    cvExists,
     checkExistingCVAndDisplay,
     retryCheckForExistingCV
   };

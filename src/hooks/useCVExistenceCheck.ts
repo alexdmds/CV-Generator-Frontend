@@ -3,11 +3,12 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/components/auth/firebase-config";
-import { getDirectPdfUrl } from "@/utils/apiService";
+import { getDirectPdfUrl, checkCVExists } from "@/utils/apiService";
 
 export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
   const [isChecking, setIsChecking] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
+  const [cvExists, setCvExists] = useState<boolean | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -31,34 +32,49 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
       setIsChecking(true);
       setCheckFailed(false);
       
-      console.log(`Checking for existing CV in background: ${cvName}`);
+      console.log(`Vérification fiable de l'existence du CV: ${cvName}`);
       
-      // On définit l'URL du PDF directement
-      const potentialUrl = getDirectPdfUrl(user.uid, cvName);
-      console.log("Setting potential PDF URL:", potentialUrl);
+      // On utilise notre fonction améliorée pour vérifier l'existence
+      const exists = await checkCVExists(user.uid, cvName);
+      setCvExists(exists);
       
-      // On définit l'URL sans vérification - nous supposons que le PDF existe
-      // C'est le composant CVPreviewPanel qui va gérer l'affichage conditionnel
-      setPdfUrl(potentialUrl);
-      
-      // On considère que la vérification a réussi par défaut
-      // Le composant CVPreviewPanel va gérer l'affichage approprié
-      setTimeout(() => {
-        setIsChecking(false);
+      if (exists) {
+        // Le CV existe, on définit l'URL
+        const directUrl = getDirectPdfUrl(user.uid, cvName);
+        console.log("CV trouvé, URL définie:", directUrl);
+        setPdfUrl(directUrl);
         
         if (showToast) {
           toast({
-            title: "Vérification terminée",
-            description: "L'aperçu du CV s'affichera s'il existe.",
+            title: "CV trouvé",
+            description: "L'aperçu du CV a été chargé avec succès.",
           });
         }
-      }, 500);
-      
-      return true;
+        
+        setIsChecking(false);
+        return true;
+      } else {
+        // Le CV n'existe pas
+        console.log("CV introuvable");
+        setPdfUrl(null);
+        
+        if (showToast) {
+          toast({
+            title: "CV introuvable",
+            description: "Aucun CV n'a été trouvé avec ce nom.",
+            variant: "destructive",
+          });
+        }
+        
+        setCheckFailed(true);
+        setIsChecking(false);
+        return false;
+      }
     } catch (error) {
       console.error("Error in CV existence check:", error);
       setCheckFailed(true);
       setPdfUrl(null);
+      setCvExists(false);
       
       if (showToast) {
         toast({
@@ -68,23 +84,22 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
         });
       }
       
+      setIsChecking(false);
       return false;
-    } finally {
-      setTimeout(() => {
-        setIsChecking(false);
-      }, 500);
     }
   };
 
   // Retry checking for an existing CV
   const retryCheckForExistingCV = async (cvName: string) => {
     setCheckFailed(false);
+    setCvExists(null);
     return checkExistingCVAndDisplay(cvName);
   };
 
   return {
     isChecking,
     checkFailed,
+    cvExists,
     checkExistingCVAndDisplay,
     retryCheckForExistingCV
   };

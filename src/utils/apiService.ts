@@ -19,6 +19,67 @@ export const getDirectPdfUrl = (userId: string, cvName: string): string => {
 };
 
 /**
+ * Fonction fiable pour vérifier l'existence d'un CV
+ * Utilise fetch avec timeout pour éviter les blocages
+ */
+export const checkCVExists = async (userId: string, cvName: string): Promise<boolean> => {
+  if (!userId || !cvName) return false;
+  
+  try {
+    const directUrl = getDirectPdfUrl(userId, cvName);
+    console.log("Vérification de l'existence du CV à:", directUrl);
+    
+    // Utilisation d'AbortController pour limiter le temps d'attente
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    try {
+      // Tentative avec un HEAD request
+      const response = await fetch(directUrl, { 
+        method: 'HEAD',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        console.log("CV trouvé via HEAD request:", cvName);
+        return true;
+      }
+      
+      console.log(`HEAD request non réussi pour ${cvName}: ${response.status}`);
+      return false;
+    } catch (fetchError) {
+      console.log("Erreur de fetch HEAD:", fetchError);
+      clearTimeout(timeoutId);
+      
+      // En cas d'échec du HEAD, on vérifie via la base Firestore
+      try {
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const cvs = userData.cvs || [];
+          
+          // Vérifier si un CV avec ce nom existe dans Firestore
+          const cvExists = cvs.some((cv: CV) => cv.cv_name === cvName);
+          console.log(`CV ${cvName} existe dans Firestore: ${cvExists}`);
+          return cvExists;
+        }
+      } catch (firestoreError) {
+        console.error("Erreur lors de la vérification Firestore:", firestoreError);
+      }
+      
+      return false;
+    }
+  } catch (error) {
+    console.error("Erreur globale dans checkCVExists:", error);
+    return false;
+  }
+};
+
+/**
  * Vérifie si un CV avec le nom donné existe déjà pour l'utilisateur
  * Version non-bloquante qui renvoie une promesse
  */
@@ -27,20 +88,17 @@ export const checkExistingCV = async (
   cvName: string
 ): Promise<string | null> => {
   try {
-    // Essayer directement l'URL publique
-    const directUrl = getDirectPdfUrl(user.uid, cvName);
-    console.log("Trying direct public URL first:", directUrl);
+    // Utiliser la nouvelle fonction fiable
+    const exists = await checkCVExists(user.uid, cvName);
     
-    // Vérifier si le PDF existe avec un HEAD request
-    const response = await fetch(directUrl, { method: 'HEAD' });
-    if (response.ok) {
-      console.log("PDF exists and is accessible");
+    if (exists) {
+      const directUrl = getDirectPdfUrl(user.uid, cvName);
+      console.log("CV existe, retourne l'URL:", directUrl);
       return directUrl;
     } else {
-      console.log("PDF does not exist or is not accessible:", response.status);
+      console.log("CV n'existe pas selon la vérification");
       return null;
     }
-    
   } catch (error) {
     console.error("Error checking for existing CV:", error);
     return null;
@@ -53,12 +111,10 @@ export const checkExistingCV = async (
  */
 export const getStoragePdfUrl = async (userId: string, cvName: string): Promise<string | null> => {
   try {
-    const directUrl = getDirectPdfUrl(userId, cvName);
+    const exists = await checkCVExists(userId, cvName);
     
-    // Vérifier si le PDF existe avec un HEAD request
-    const response = await fetch(directUrl, { method: 'HEAD' });
-    if (response.ok) {
-      return directUrl;
+    if (exists) {
+      return getDirectPdfUrl(userId, cvName);
     } else {
       return null;
     }

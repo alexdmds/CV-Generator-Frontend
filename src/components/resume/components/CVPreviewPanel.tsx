@@ -26,102 +26,89 @@ export function CVPreviewPanel({
   retryCheckForExistingCV,
   refreshPdfDisplay
 }: CVPreviewPanelProps) {
-  const [iframeError, setIframeError] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [iframeLoadAttempted, setIframeLoadAttempted] = useState(false);
-  const [isErrorContentVisible, setIsErrorContentVisible] = useState(false);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [loadAttempted, setLoadAttempted] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
-  // Reset iframe states when URL changes
+  // Reset states when URL changes
   useEffect(() => {
     if (pdfUrl) {
-      setIframeError(false);
-      setIframeLoaded(false);
-      setIframeLoadAttempted(false);
-      setIsErrorContentVisible(false);
+      setPdfLoaded(false);
+      setShowPdfViewer(false);
+      setLoadAttempted(false);
     }
   }, [pdfUrl]);
   
-  // Function to force PDF refresh
+  // Function to handle refresh
   const handleRefreshPdf = useCallback(() => {
     const user = auth.currentUser;
     if (user && cvName) {
       refreshPdfDisplay(user.uid, cvName);
-      setIframeError(false);
-      setIframeLoaded(false);
-      setIframeLoadAttempted(false);
-      setIsErrorContentVisible(false);
+      setPdfLoaded(false);
+      setShowPdfViewer(false);
+      setLoadAttempted(false);
     }
   }, [cvName, refreshPdfDisplay]);
 
   // Function to handle retry
   const handleRetry = useCallback(() => {
     retryCheckForExistingCV(cvName);
-    setIframeError(false);
-    setIframeLoaded(false);
-    setIframeLoadAttempted(false);
-    setIsErrorContentVisible(false);
+    setPdfLoaded(false);
+    setShowPdfViewer(false);
+    setLoadAttempted(false);
   }, [retryCheckForExistingCV, cvName]);
 
-  // Detect iframe errors with fallback for cases where onError doesn't fire
+  // Try to load the PDF in a hidden iframe first to check if it exists
   useEffect(() => {
-    if (pdfUrl && !iframeLoaded && !iframeError) {
-      setIframeLoadAttempted(true);
+    if (pdfUrl && !loadAttempted) {
+      setLoadAttempted(true);
       
-      // Set a shorter timeout to check if iframe loaded correctly
-      const timer = setTimeout(() => {
-        if (!iframeLoaded) {
-          console.log("PDF load timeout - assuming error occurred");
-          setIframeError(true);
-        }
-      }, 2000);
+      // Create a temporary iframe to test loading
+      const testIframe = document.createElement('iframe');
+      testIframe.style.display = 'none';
+      testIframe.src = pdfUrl;
+      document.body.appendChild(testIframe);
       
-      return () => clearTimeout(timer);
-    }
-  }, [pdfUrl, iframeLoaded, iframeError]);
-
-  // Monitor iframe content for error messages
-  useEffect(() => {
-    if (iframeRef.current && pdfUrl) {
-      // Check for error content after a short delay
+      // Set a timeout to check if the PDF loaded successfully
       const timer = setTimeout(() => {
         try {
-          // Since we can't access iframe content directly due to CORS, we rely on
-          // the error handler and timeout to detect errors
-          if (!iframeLoaded && iframeLoadAttempted) {
-            setIframeError(true);
+          // Try to access content - this will fail with CORS if the PDF exists
+          // But we can catch the error if the iframe loads at all
+          if (testIframe.contentWindow) {
+            // If we can access contentWindow, PDF might exist
+            setShowPdfViewer(true);
           }
-        } catch (error) {
-          console.error("Error monitoring iframe content:", error);
-          setIframeError(true);
+        } catch (e) {
+          // If we get an error about CORS, it means the PDF exists
+          setShowPdfViewer(true);
+        } finally {
+          // Clean up the test iframe
+          document.body.removeChild(testIframe);
         }
-      }, 1500); // Short timeout to detect errors quickly
+      }, 1000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        if (document.body.contains(testIframe)) {
+          document.body.removeChild(testIframe);
+        }
+      };
     }
-  }, [pdfUrl, iframeLoadAttempted, iframeLoaded]);
+  }, [pdfUrl, loadAttempted]);
 
-  // Function to handle iframe load event
+  // Handle actual iframe load event
   const handleIframeLoad = useCallback(() => {
-    console.log("PDF iframe triggered onLoad event");
-    
-    // Check if there might be an error (we can't access content due to CORS)
-    // but we can delay showing content to see if errors appear
-    setTimeout(() => {
-      // If no error was detected during this time, consider it loaded successfully
-      if (!iframeError) {
-        setIframeLoaded(true);
-      }
-    }, 500);
-  }, [iframeError]);
-
-  // Function to handle iframe error event
-  const handleIframeError = useCallback(() => {
-    console.error("Failed to load PDF via iframe onError event");
-    setIframeError(true);
+    setPdfLoaded(true);
   }, []);
 
-  // Component content
+  // Open PDF in new tab
+  const handleOpenPdf = useCallback(() => {
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, [pdfUrl]);
+
   return (
     <Card>
       <CardHeader>
@@ -133,7 +120,7 @@ export function CVPreviewPanel({
               Chargement...
             </div>
           )}
-          {!isChecking && pdfUrl && iframeLoaded && !iframeError && (
+          {!isChecking && pdfUrl && pdfLoaded && showPdfViewer && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -153,57 +140,52 @@ export function CVPreviewPanel({
               message="Génération du CV en cours..."
             />
           </div>
-        ) : pdfUrl && !iframeError ? (
+        ) : pdfUrl && showPdfViewer ? (
           <div className="rounded-md overflow-hidden border border-gray-300 relative">
             {/* Loading indicator for PDF */}
-            {!iframeLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            {!pdfLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                 <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
               </div>
             )}
             
             {/* Create a wrapper that only shows the iframe when it's successfully loaded */}
-            <div className={`${iframeLoaded ? 'block' : 'hidden'} w-full h-[500px]`}>
-              {!iframeError && (
-                <iframe 
-                  ref={iframeRef}
-                  src={pdfUrl}
-                  className="w-full h-full"
-                  title="CV généré"
-                  key={pdfUrl} // Force iframe reset when URL changes
-                  onLoad={handleIframeLoad}
-                  onError={handleIframeError}
-                  sandbox="allow-same-origin allow-scripts"
-                />
+            <div className="w-full h-[500px] relative">
+              <iframe 
+                ref={iframeRef}
+                src={pdfUrl}
+                className={`w-full h-full ${pdfLoaded ? 'visible' : 'invisible'}`}
+                title="CV généré"
+                key={pdfUrl} // Force iframe reset when URL changes
+                onLoad={handleIframeLoad}
+                sandbox="allow-same-origin allow-scripts"
+              />
+              
+              {/* Explicitly show a loading indicator while trying to load */}
+              {!pdfLoaded && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <Skeleton className="w-full h-full absolute inset-0" />
+                </div>
               )}
             </div>
             
-            {/* Explicitly show a loading indicator while trying to load */}
-            {!iframeLoaded && !iframeError && (
-              <div className="w-full h-[500px] flex flex-col items-center justify-center">
-                <Skeleton className="w-full h-full" />
-              </div>
-            )}
-            
             {/* Actions for loaded PDF */}
-            {iframeLoaded && !iframeError && (
-              <div className="mt-4 flex justify-center space-x-4">
-                <Button 
-                  variant="default" 
-                  onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Voir le PDF
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleRefreshPdf}
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  Rafraîchir
-                </Button>
-              </div>
-            )}
+            <div className="mt-4 flex justify-center space-x-4">
+              <Button 
+                variant="default" 
+                onClick={handleOpenPdf}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Voir le PDF
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshPdf}
+              >
+                <RefreshCcw className="w-4 h-4 mr-2" />
+                Rafraîchir
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="p-6 text-center">
@@ -211,9 +193,7 @@ export function CVPreviewPanel({
               <FileX className="w-16 h-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900">CV pas encore généré</h3>
               <p className="text-gray-500 mt-2">
-                {iframeLoadAttempted ? 
-                  "Le PDF n'a pas pu être chargé. Il est possible que le CV n'ait pas encore été généré ou que vous n'ayez pas les permissions nécessaires." : 
-                  "Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible."}
+                Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible.
               </p>
               <Button 
                 variant="outline" 

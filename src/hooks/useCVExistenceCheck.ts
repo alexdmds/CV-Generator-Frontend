@@ -33,46 +33,28 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
       
       console.log(`Checking for existing CV in background: ${cvName}`);
       
-      try {
-        // Au lieu de vérifier l'existence du fichier (ce qui cause l'erreur Access Denied),
-        // on donne simplement l'URL du PDF et laisse l'interface gérer l'affichage
-        // L'état iframeError dans le composant CVPreviewPanel s'occupera de cacher l'erreur
-        const potentialUrl = getDirectPdfUrl(user.uid, cvName);
-        console.log("Setting potential PDF URL:", potentialUrl);
-        
-        // On ne fait pas de requête de vérification, on définit simplement l'URL
-        // et le composant s'occupera de gérer l'affichage ou l'erreur
-        setPdfUrl(potentialUrl);
-        
-        setTimeout(() => {
-          setIsChecking(false);
-          
-          if (showToast) {
-            toast({
-              title: "Vérification terminée",
-              description: "L'aperçu du CV s'affichera s'il existe.",
-            });
-          }
-        }, 1000);
-        
-        return true;
-      } catch (err) {
-        console.error("Error constructing PDF URL:", err);
-        setCheckFailed(true);
-        setPdfUrl(null);
+      // Au lieu de vérifier l'existence du fichier, on définit simplement l'URL potentielle
+      const potentialUrl = getDirectPdfUrl(user.uid, cvName);
+      console.log("Setting potential PDF URL:", potentialUrl);
+      
+      // On définit l'URL et laisse le composant CVPreviewPanel gérer l'affichage
+      setPdfUrl(potentialUrl);
+      
+      // Terminer la vérification après un court délai
+      setTimeout(() => {
+        setIsChecking(false);
         
         if (showToast) {
           toast({
-            title: "Erreur",
-            description: "Impossible de charger le CV",
-            variant: "destructive",
+            title: "Vérification terminée",
+            description: "L'aperçu du CV s'affichera s'il existe.",
           });
         }
-        
-        return false;
-      }
+      }, 1000);
+      
+      return true;
     } catch (error) {
-      console.error("Error in immediate PDF access:", error);
+      console.error("Error in CV existence check:", error);
       setCheckFailed(true);
       setPdfUrl(null);
       
@@ -86,7 +68,9 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
       
       return false;
     } finally {
-      setIsChecking(false);
+      setTimeout(() => {
+        setIsChecking(false);
+      }, 1000);
     }
   };
 

@@ -37,23 +37,18 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
       
       console.log(`Checking for existing CV in background: ${cvName}`);
 
-      // Verify in background but don't block UI
-      setTimeout(async () => {
-        try {
-          if (showToast) {
-            toast({
-              title: "CV chargé",
-              description: "Le CV est disponible",
-            });
-          }
-          
-          // Check is complete
-          setIsChecking(false);
-        } catch (error) {
-          console.error("Background check error:", error);
-          setIsChecking(false);
+      // Nous assumons que le CV n'existe pas encore, sa génération sera confirmée par l'utilisateur
+      // en cliquant sur le bouton "Générer mon CV"
+      setTimeout(() => {
+        setIsChecking(false);
+        
+        if (showToast) {
+          toast({
+            title: "Vérification terminée",
+            description: "Si le CV existe, il sera affiché automatiquement.",
+          });
         }
-      }, 0);
+      }, 1000);
       
       return true;
     } catch (error) {

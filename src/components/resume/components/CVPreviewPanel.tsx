@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, RefreshCcw, FileX } from "lucide-react";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { auth } from "@/components/auth/firebase-config";
 
 interface CVPreviewPanelProps {
@@ -26,13 +26,23 @@ export function CVPreviewPanel({
   refreshPdfDisplay
 }: CVPreviewPanelProps) {
   const [iframeError, setIframeError] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  
+  // Reset iframe states when URL changes
+  useEffect(() => {
+    if (pdfUrl) {
+      setIframeError(false);
+      setIframeLoaded(false);
+    }
+  }, [pdfUrl]);
   
   // Function to force PDF refresh
   const handleRefreshPdf = useCallback(() => {
     const user = auth.currentUser;
     if (user && cvName) {
       refreshPdfDisplay(user.uid, cvName);
-      setIframeError(false); // Reset error state on refresh
+      setIframeError(false);
+      setIframeLoaded(false);
     }
   }, [cvName, refreshPdfDisplay]);
 
@@ -40,6 +50,7 @@ export function CVPreviewPanel({
   const handleRetry = useCallback(() => {
     retryCheckForExistingCV(cvName);
     setIframeError(false);
+    setIframeLoaded(false);
   }, [retryCheckForExistingCV, cvName]);
 
   return (
@@ -53,7 +64,7 @@ export function CVPreviewPanel({
               Chargement...
             </div>
           )}
-          {!isChecking && pdfUrl && !iframeError && (
+          {!isChecking && pdfUrl && iframeLoaded && !iframeError && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -74,33 +85,47 @@ export function CVPreviewPanel({
             />
           </div>
         ) : pdfUrl && !iframeError ? (
-          <div className="rounded-md overflow-hidden border border-gray-300">
+          <div className="rounded-md overflow-hidden border border-gray-300 relative">
+            <div className={!iframeLoaded ? "block" : "hidden"}>
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+              </div>
+            </div>
+            
             <iframe 
               src={pdfUrl}
-              className="w-full h-[500px]"
+              className={`w-full h-[500px] ${iframeLoaded ? 'block' : 'opacity-0'}`}
               title="CV généré"
               key={pdfUrl} // Force iframe reset when URL changes
+              onLoad={() => {
+                console.log("PDF iframe loaded successfully");
+                setIframeLoaded(true);
+              }}
               onError={() => {
-                console.error("Failed to load PDF, setting error state");
+                console.error("Failed to load PDF, showing error state");
                 setIframeError(true);
               }}
+              sandbox="allow-same-origin allow-scripts"
             />
-            <div className="mt-4 flex justify-center space-x-4">
-              <Button 
-                variant="default" 
-                onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Voir le PDF
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleRefreshPdf}
-              >
-                <RefreshCcw className="w-4 h-4 mr-2" />
-                Rafraîchir
-              </Button>
-            </div>
+            
+            {iframeLoaded && (
+              <div className="mt-4 flex justify-center space-x-4">
+                <Button 
+                  variant="default" 
+                  onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Voir le PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefreshPdf}
+                >
+                  <RefreshCcw className="w-4 h-4 mr-2" />
+                  Rafraîchir
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-6 text-center">

@@ -27,37 +27,64 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
         return false;
       }
 
-      // Mettre l'URL potentielle dans l'état, mais considérer qu'elle pourrait ne pas fonctionner
-      // L'erreur sera gérée visuellement par le composant CVPreviewPanel
-      const potentialUrl = getDirectPdfUrl(user.uid, cvName);
-      console.log("Setting potential PDF URL:", potentialUrl);
-      setPdfUrl(potentialUrl);
-      
       // Marquer la vérification comme démarrée
       setIsChecking(true);
       setCheckFailed(false);
       
       console.log(`Checking for existing CV in background: ${cvName}`);
-
-      // Nous finissons la vérification rapidement - l'affichage visuel
-      // sera géré par le composant de l'interface
-      setTimeout(() => {
-        setIsChecking(false);
+      
+      try {
+        // Créer l'URL potentielle du PDF sans vérifier si elle existe
+        const potentialUrl = getDirectPdfUrl(user.uid, cvName);
+        console.log("Setting potential PDF URL:", potentialUrl);
+        
+        // On définit l'URL du PDF - le composant CVPreviewPanel gérera l'affichage
+        // même si le fichier n'existe pas ou s'il y a des erreurs d'accès
+        setPdfUrl(potentialUrl);
+        
+        // Finir la vérification rapidement
+        setTimeout(() => {
+          setIsChecking(false);
+          
+          if (showToast) {
+            toast({
+              title: "Vérification terminée",
+              description: "Si le CV existe, il sera affiché automatiquement.",
+            });
+          }
+        }, 1000);
+        
+        return true;
+      } catch (err) {
+        console.error("Error constructing PDF URL:", err);
+        setCheckFailed(true);
         
         if (showToast) {
           toast({
-            title: "Vérification terminée",
-            description: "Si le CV existe, il sera affiché automatiquement.",
+            title: "Erreur",
+            description: "Impossible de vérifier l'existence du CV",
+            variant: "destructive",
           });
         }
-      }, 1000);
-      
-      return true;
+        
+        return false;
+      }
     } catch (error) {
       console.error("Error in immediate PDF access:", error);
       setCheckFailed(true);
-      setIsChecking(false);
+      setPdfUrl(null);
+      
+      if (showToast) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de vérifier l'existence du CV",
+          variant: "destructive",
+        });
+      }
+      
       return false;
+    } finally {
+      setIsChecking(false);
     }
   };
 

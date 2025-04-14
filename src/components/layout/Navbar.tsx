@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getAuth, signOut } from "firebase/auth";
 import { useToast } from "@/components/ui/use-toast";
@@ -31,6 +31,15 @@ export const Navbar = () => {
           Generateur de CV
         </div>
         <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/resumes")}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <FileText className="h-4 w-4" />
+            Mes CVs
+          </Button>
           <Button
             variant="ghost"
             size="sm"

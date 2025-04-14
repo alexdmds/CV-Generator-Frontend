@@ -32,9 +32,9 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
       setIsChecking(true);
       setCheckFailed(false);
       
-      console.log(`Vérification fiable de l'existence du CV: ${cvName}`);
+      console.log(`Vérification de l'existence du CV dans Firestore: ${cvName}`);
       
-      // On utilise notre fonction améliorée pour vérifier l'existence
+      // On utilise notre fonction améliorée pour vérifier l'existence dans Firestore uniquement
       const exists = await checkCVExists(user.uid, cvName);
       setCvExists(exists);
       
@@ -55,7 +55,7 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
         return true;
       } else {
         // Le CV n'existe pas
-        console.log("CV introuvable");
+        console.log("CV introuvable dans Firestore");
         setPdfUrl(null);
         
         if (showToast) {

@@ -30,14 +30,15 @@ export function CVPreviewPanel({
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [pdfError, setPdfError] = useState(false);
   const [confirmedPdfExists, setConfirmedPdfExists] = useState<boolean | null>(null);
+  const [displayMode, setDisplayMode] = useState<'loading' | 'pdf' | 'error'>('loading');
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const timeoutRef = useRef<number | null>(null);
   
   // Vérification indépendante de l'existence du PDF
   useEffect(() => {
     const verifyPdfExists = async () => {
       if (!cvName || isGenerating) {
         setConfirmedPdfExists(false);
+        setDisplayMode('error');
         return;
       }
       
@@ -45,19 +46,23 @@ export function CVPreviewPanel({
       if (!user) return;
       
       try {
-        console.log("Vérification indépendante de l'existence du PDF");
+        console.log("Vérification indépendante dans Firestore");
         const exists = await checkCVExists(user.uid, cvName);
-        console.log(`Résultat de vérification indépendante: ${exists}`);
+        console.log(`Résultat de vérification Firestore: ${exists}`);
         setConfirmedPdfExists(exists);
         
-        if (!exists) {
+        if (exists) {
+          setDisplayMode('pdf');
+        } else {
+          setDisplayMode('error');
           setPdfError(true);
           setPdfLoaded(false);
         }
       } catch (error) {
-        console.error("Erreur lors de la vérification indépendante:", error);
+        console.error("Erreur lors de la vérification Firestore:", error);
         setConfirmedPdfExists(false);
         setPdfError(true);
+        setDisplayMode('error');
       }
     };
     
@@ -69,8 +74,10 @@ export function CVPreviewPanel({
     if (pdfUrl) {
       setPdfLoaded(false);
       setPdfError(false);
+      setDisplayMode('loading');
     } else {
       setPdfError(true);
+      setDisplayMode('error');
     }
   }, [pdfUrl]);
   
@@ -81,6 +88,7 @@ export function CVPreviewPanel({
       refreshPdfDisplay(user.uid, cvName);
       setPdfLoaded(false);
       setPdfError(false);
+      setDisplayMode('loading');
       setConfirmedPdfExists(null);
     }
   }, [cvName, refreshPdfDisplay]);
@@ -90,6 +98,7 @@ export function CVPreviewPanel({
     retryCheckForExistingCV(cvName);
     setPdfLoaded(false);
     setPdfError(false);
+    setDisplayMode('loading');
     setConfirmedPdfExists(null);
   }, [retryCheckForExistingCV, cvName]);
 
@@ -97,30 +106,18 @@ export function CVPreviewPanel({
   const handleIframeLoad = useCallback(() => {
     setPdfLoaded(true);
     setPdfError(false);
+    setDisplayMode('pdf');
     
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    
-    // Vérifier si l'iframe a chargé un contenu valide
-    try {
-      const iframe = iframeRef.current;
-      if (iframe && iframe.contentWindow) {
-        // Si on peut accéder à contentWindow sans erreur, c'est bon signe
-        console.log("PDF iframe loaded successfully");
-        setConfirmedPdfExists(true);
-      }
-    } catch (e) {
-      console.log("PDF might exist but caused a CORS error, consider it loaded");
-      setConfirmedPdfExists(true);
-    }
+    // Si l'iframe a chargé, on considère que le PDF existe
+    setConfirmedPdfExists(true);
+    console.log("PDF iframe loaded successfully");
   }, []);
 
   // Handle iframe error
   const handleIframeError = useCallback(() => {
     console.error("PDF iframe failed to load");
     setPdfError(true);
+    setDisplayMode('error');
     setConfirmedPdfExists(false);
   }, []);
 
@@ -132,13 +129,16 @@ export function CVPreviewPanel({
   }, [pdfUrl]);
 
   // Déterminer ce qui doit être affiché
-  const shouldShowLoadingState = isGenerating || isChecking;
-  const shouldShowErrorState = !shouldShowLoadingState && 
-                               (checkFailed || pdfError || confirmedPdfExists === false);
-  const shouldShowPdfState = !shouldShowLoadingState && 
-                             !shouldShowErrorState && 
-                             pdfUrl && 
-                             (confirmedPdfExists === true || confirmedPdfExists === null);
+  const shouldShowLoadingState = isGenerating || isChecking || 
+                               (displayMode === 'loading' && !pdfLoaded && pdfUrl);
+  
+  const shouldShowErrorState = !isGenerating && !isChecking && 
+                              (displayMode === 'error' || checkFailed || 
+                               confirmedPdfExists === false);
+  
+  const shouldShowPdfState = !isGenerating && !isChecking && 
+                            displayMode === 'pdf' && pdfUrl && 
+                            (pdfLoaded || confirmedPdfExists === true);
 
   return (
     <Card>
@@ -151,7 +151,7 @@ export function CVPreviewPanel({
               Chargement...
             </div>
           )}
-          {!isChecking && pdfUrl && pdfLoaded && !pdfError && (
+          {!isChecking && shouldShowPdfState && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -173,33 +173,19 @@ export function CVPreviewPanel({
           </div>
         ) : shouldShowPdfState ? (
           <div className="rounded-md overflow-hidden border border-gray-300 relative">
-            {/* Loading indicator for PDF */}
-            {!pdfLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
-              </div>
-            )}
-            
-            {/* Create a wrapper that only shows the iframe when it's successfully loaded */}
+            {/* Create a wrapper that only shows content when PDF is available */}
             <div className="w-full h-[500px] relative">
+              {/* Le PDF est disponible et peut être affiché */}
               {pdfUrl && (
-                <iframe 
-                  ref={iframeRef}
-                  src={pdfUrl}
-                  className={`w-full h-full ${pdfLoaded ? 'visible' : 'invisible'}`}
-                  title="CV généré"
-                  key={pdfUrl} // Force iframe reset when URL changes
-                  onLoad={handleIframeLoad}
-                  onError={handleIframeError}
-                  sandbox="allow-same-origin allow-scripts"
-                />
-              )}
-              
-              {/* Explicitly show a loading indicator while trying to load */}
-              {!pdfLoaded && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <Skeleton className="w-full h-full absolute inset-0" />
-                </div>
+                <>
+                  {/* Nous utilisons un lien direct plutôt qu'un iframe pour éviter les problèmes CORS */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
+                    <FileText className="w-16 h-16 text-gray-400 mb-4" />
+                    <p className="text-gray-700 text-center mb-4">
+                      Le CV a été généré avec succès.
+                    </p>
+                  </div>
+                </>
               )}
             </div>
             
@@ -208,7 +194,6 @@ export function CVPreviewPanel({
               <Button 
                 variant="default" 
                 onClick={handleOpenPdf}
-                disabled={!pdfLoaded}
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Voir le PDF

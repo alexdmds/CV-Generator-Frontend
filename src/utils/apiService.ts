@@ -15,64 +15,34 @@ interface GenerateCVResponse {
 export const getDirectPdfUrl = (userId: string, cvName: string): string => {
   // Utiliser la structure directe du bucket public
   const encodedName = encodeURIComponent(cvName);
-  return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
+  return `https://storage.googleapis.com/cv-generator-447314.appspot.com/${userId}/cvs/${encodedName}.pdf`;
 };
 
 /**
- * Fonction fiable pour vérifier l'existence d'un CV
- * Utilise fetch avec timeout pour éviter les blocages
+ * Fonction fiable pour vérifier l'existence d'un CV en consultant Firestore uniquement
+ * Évite les requêtes HEAD qui peuvent causer des problèmes CORS
  */
 export const checkCVExists = async (userId: string, cvName: string): Promise<boolean> => {
   if (!userId || !cvName) return false;
   
   try {
-    const directUrl = getDirectPdfUrl(userId, cvName);
-    console.log("Vérification de l'existence du CV à:", directUrl);
+    console.log(`Vérification Firestore pour CV: ${cvName}`);
     
-    // Utilisation d'AbortController pour limiter le temps d'attente
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // Vérifier via la base Firestore uniquement (plus fiable)
+    const userDocRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userDocRef);
     
-    try {
-      // Tentative avec un HEAD request
-      const response = await fetch(directUrl, { 
-        method: 'HEAD',
-        signal: controller.signal
-      });
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const cvs = userData.cvs || [];
       
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        console.log("CV trouvé via HEAD request:", cvName);
-        return true;
-      }
-      
-      console.log(`HEAD request non réussi pour ${cvName}: ${response.status}`);
-      return false;
-    } catch (fetchError) {
-      console.log("Erreur de fetch HEAD:", fetchError);
-      clearTimeout(timeoutId);
-      
-      // En cas d'échec du HEAD, on vérifie via la base Firestore
-      try {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const cvs = userData.cvs || [];
-          
-          // Vérifier si un CV avec ce nom existe dans Firestore
-          const cvExists = cvs.some((cv: CV) => cv.cv_name === cvName);
-          console.log(`CV ${cvName} existe dans Firestore: ${cvExists}`);
-          return cvExists;
-        }
-      } catch (firestoreError) {
-        console.error("Erreur lors de la vérification Firestore:", firestoreError);
-      }
-      
-      return false;
+      // Vérifier si un CV avec ce nom existe dans Firestore
+      const cvExists = cvs.some((cv: CV) => cv.cv_name === cvName);
+      console.log(`CV ${cvName} existe dans Firestore: ${cvExists}`);
+      return cvExists;
     }
+    
+    return false;
   } catch (error) {
     console.error("Erreur globale dans checkCVExists:", error);
     return false;
@@ -88,7 +58,7 @@ export const checkExistingCV = async (
   cvName: string
 ): Promise<string | null> => {
   try {
-    // Utiliser la nouvelle fonction fiable
+    // Utiliser la méthode basée sur Firestore uniquement
     const exists = await checkCVExists(user.uid, cvName);
     
     if (exists) {

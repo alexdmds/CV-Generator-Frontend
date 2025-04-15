@@ -18,8 +18,13 @@ export function ResumeActions({ deleteResume, renameResume }: ResumeActionsProps
 
   const handleDeleteCV = async () => {
     if (cvToDelete) {
-      console.log("Deleting CV with ID:", cvToDelete);
-      await deleteResume(cvToDelete);
+      console.log("Executing deletion for CV with ID:", cvToDelete);
+      try {
+        await deleteResume(cvToDelete);
+        console.log("Delete operation completed for CV ID:", cvToDelete);
+      } catch (error) {
+        console.error("Error in handleDeleteCV:", error);
+      }
     } else {
       console.error("No CV ID to delete");
     }

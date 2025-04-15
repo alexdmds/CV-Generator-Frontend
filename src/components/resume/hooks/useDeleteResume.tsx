@@ -38,6 +38,8 @@ export const useDeleteResume = (
       const docRef = doc(db, "cvs", cvId);
       console.log("Deleting document with ref:", docRef.path);
       
+      // Vérifiez si le CV appartient à l'utilisateur actuel avant de le supprimer
+      // Cette vérification est effectuée par les règles de sécurité Firestore
       await deleteDoc(docRef);
       console.log("Document successfully deleted");
       
@@ -50,9 +52,15 @@ export const useDeleteResume = (
       });
     } catch (error) {
       console.error("Error deleting CV:", error);
+      
+      // Message d'erreur plus détaillé pour aider au débogage
+      const errorMessage = error instanceof Error 
+        ? `${error.name}: ${error.message}` 
+        : "Erreur inconnue";
+      
       toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le CV",
+        title: "Erreur de suppression",
+        description: `Impossible de supprimer le CV. ${errorMessage}`,
         variant: "destructive",
       });
     }

@@ -37,9 +37,12 @@ export const ResumeList = () => {
     }
 
     if (resume) {
-      if ((resume as any).id) {
-        navigate(`/resumes/${(resume as any).id}`);
+      const resumeId = (resume as any).id;
+      if (resumeId) {
+        console.log("Navigating to resume with ID:", resumeId);
+        navigate(`/resumes/${resumeId}`);
       } else {
+        console.error("Resume missing ID:", resume);
         toast({
           title: "Erreur",
           description: "ID du CV manquant",
@@ -63,8 +66,10 @@ export const ResumeList = () => {
             resumes={resumes}
             onResumeClick={handleResumeClick}
             onRenameClick={(resume) => {
-              if ((resume as any).id) {
-                resumeActions.setCvToRename((resume as any).id);
+              const resumeId = (resume as any).id;
+              if (resumeId) {
+                console.log("Setting CV to rename with ID:", resumeId);
+                resumeActions.setCvToRename(resumeId);
                 resumeActions.setNewCvName(resume.cv_name);
                 resumeActions.setRenameDialogOpen(true);
               } else {
@@ -77,9 +82,10 @@ export const ResumeList = () => {
               }
             }}
             onDeleteClick={(resume) => {
-              if ((resume as any).id) {
-                console.log("Setting CV to delete with ID:", (resume as any).id);
-                resumeActions.setCvToDelete((resume as any).id);
+              const resumeId = (resume as any).id;
+              if (resumeId) {
+                console.log("Setting CV to delete with ID:", resumeId);
+                resumeActions.setCvToDelete(resumeId);
                 resumeActions.setDeleteConfirmOpen(true);
               } else {
                 console.error("Resume missing ID:", resume);

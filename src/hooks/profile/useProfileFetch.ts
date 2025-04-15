@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from "react";
-import { Profile } from "@/types/profile";
+import { Profile, Experience, Education } from "@/types/profile";
 import { getAuth } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/components/ui/use-toast";
@@ -40,29 +40,29 @@ export const useProfileFetch = (
         // Vérification des champs d'expérience et de formation
         if (loadedProfile.experiences) {
           // Conversion du champ "full_descriptions" vers "description" si nécessaire
-          loadedProfile.experiences = loadedProfile.experiences.map(exp => {
+          loadedProfile.experiences = loadedProfile.experiences.map((exp: any) => {
             if ('full_descriptions' in exp) {
               return {
                 ...exp,
-                description: exp.full_descriptions || '',
+                description: exp.full_descriptions || '' as string,
                 full_descriptions: undefined
-              };
+              } as Experience;
             }
-            return exp;
+            return exp as Experience;
           });
         }
 
         if (loadedProfile.educations) {
           // Conversion du champ "full_descriptions" vers "description" si nécessaire
-          loadedProfile.educations = loadedProfile.educations.map(edu => {
+          loadedProfile.educations = loadedProfile.educations.map((edu: any) => {
             if ('full_descriptions' in edu) {
               return {
                 ...edu,
-                description: edu.full_descriptions || '',
+                description: edu.full_descriptions || '' as string,
                 full_descriptions: undefined
-              };
+              } as Education;
             }
-            return edu;
+            return edu as Education;
           });
         }
 

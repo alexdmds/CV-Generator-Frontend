@@ -12,14 +12,16 @@ export interface Experience {
   company: string;
   location: string;
   dates: string;
-  description: string; // Modifié de full_descriptions à description
+  description: string;
+  full_descriptions?: string; // Added as optional for backward compatibility
 }
 
 export interface Education {
   title: string;
   university: string;
   dates: string;
-  description: string; // Modifié de full_descriptions à description
+  description: string;
+  full_descriptions?: string; // Added as optional for backward compatibility
 }
 
 export interface Language {

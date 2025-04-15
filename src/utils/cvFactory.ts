@@ -1,11 +1,10 @@
-
 import { Profile, CV, CVData, CVEducation, CVExperience, Language, Skill } from "@/types/profile";
 
 export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: string, language: string = "français"): CV => {
   // Transform educations
   const educations = profile.educations.map(edu => ({
     title: edu.title,
-    description: edu.full_descriptions,
+    description: edu.description,
     dates: edu.dates,
     university: edu.university,
     location: "" // This field needs to be filled by user
@@ -15,7 +14,7 @@ export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: st
   const experiences = profile.experiences.map(exp => ({
     company: exp.company,
     title: exp.title,
-    bullets: exp.full_descriptions.split("\n").filter(bullet => bullet.trim() !== ""), // Split by newlines to create bullets
+    bullets: exp.description.split("\n").filter(bullet => bullet.trim() !== ""), // Changed from full_descriptions to description
     dates: exp.dates,
     location: exp.location
   }));

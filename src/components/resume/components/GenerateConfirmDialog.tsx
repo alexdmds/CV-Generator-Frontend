@@ -51,10 +51,10 @@ export function GenerateConfirmDialog({
         
         {isSubmitting && (
           <div className="py-4">
-            <Progress value={progress} className="h-2 mb-3" />
+            <Progress value={progress} className="h-3 mb-3 bg-gray-200" />
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <p>Préparation en cours... {progress.toFixed(0)}%</p>
+              <p>Préparation en cours... {Math.round(progress)}%</p>
             </div>
           </div>
         )}
@@ -67,7 +67,7 @@ export function GenerateConfirmDialog({
           ) : (
             <>
               <AlertDialogCancel disabled={isSubmitting}>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={onConfirm} disabled={isSubmitting}>
+              <AlertDialogAction onClick={onConfirm} disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

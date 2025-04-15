@@ -6,8 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { doc, collection, setDoc } from "firebase/firestore";
 import { db, auth } from "@/components/auth/firebase-config";
 import { useCVGeneration } from "@/hooks/useCVGeneration";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
+import { useNavigate } from "react-router-dom";
 
 interface GenerateResumeDialogProps {
   jobDescriptionDialogOpen: boolean;
@@ -28,6 +27,7 @@ export function GenerateResumeDialog({
   const [pendingCvName, setPendingCvName] = useState<string | null>(null);
   const { toast } = useToast();
   const { isGenerating, progress, generateCV } = useCVGeneration();
+  const navigate = useNavigate();
 
   // Fonction pour émettre des événements de progression de la génération
   const emitGenerationEvent = (eventName: string, data: any = {}) => {
@@ -36,6 +36,38 @@ export function GenerateResumeDialog({
       bubbles: true 
     });
     window.dispatchEvent(event);
+  };
+
+  // Générer une progression plus cohérente
+  const generateSmoothProgress = (initialProgress: number, targetProgress: number, duration: number, updateInterval: number) => {
+    const steps = Math.floor(duration / updateInterval);
+    const increment = (targetProgress - initialProgress) / steps;
+    let currentStep = 0;
+    let currentProgress = initialProgress;
+    
+    const interval = setInterval(() => {
+      currentStep++;
+      currentProgress += increment;
+      
+      // Ajouter une légère variation aléatoire pour paraître naturel
+      const randomFactor = 0.2; // 20% de variation maximale
+      const variation = increment * randomFactor * (Math.random() - 0.5);
+      
+      currentProgress = Math.min(Math.max(currentProgress + variation, initialProgress), targetProgress);
+      
+      // Émettre l'événement de progression
+      emitGenerationEvent('cv-generation-progress', { 
+        progress: currentProgress,
+        cvId: pendingCvId
+      });
+      
+      // Arrêter l'intervalle une fois la progression cible atteinte
+      if (currentStep >= steps || currentProgress >= targetProgress) {
+        clearInterval(interval);
+      }
+    }, updateInterval);
+    
+    return interval;
   };
 
   const handleJobDescriptionSubmit = async (jobDescription: string) => {
@@ -112,41 +144,65 @@ export function GenerateResumeDialog({
         cvName: pendingCvName
       });
       
-      // Configurer un intervalle pour simuler une progression en attendant l'API
-      const progressInterval = setInterval(() => {
-        // Mettre à jour la progression jusqu'à 90%
-        const newProgress = Math.min(progress + Math.random() * 5, 90);
-        
-        // Émettre l'événement de progression
-        emitGenerationEvent('cv-generation-progress', { 
-          progress: newProgress,
-          cvId: pendingCvId
-        });
-      }, 2000);
+      // Progression par étapes avec intervalles de temps réalistes
+      const initialProgress = 5;
+      
+      // Intervalles de progression par étapes
+      let progressIntervals: NodeJS.Timeout[] = [];
+      
+      // Étape 1: 5% -> 30% (analyse du poste)
+      progressIntervals.push(generateSmoothProgress(initialProgress, 30, 5000, 200));
+      
+      // Étape 2: 30% -> 50% (adaptation du profil)
+      setTimeout(() => {
+        progressIntervals.push(generateSmoothProgress(30, 50, 8000, 200));
+      }, 5000);
+      
+      // Étape 3: 50% -> 70% (mise en forme)
+      setTimeout(() => {
+        progressIntervals.push(generateSmoothProgress(50, 70, 8000, 200));
+      }, 13000);
+      
+      // Étape 4: 70% -> 85% (finalisation)
+      setTimeout(() => {
+        progressIntervals.push(generateSmoothProgress(70, 85, 6000, 200));
+      }, 21000);
       
       // Appel explicite avec l'ID exact du document
       const success = await generateCV(pendingCvId);
       
-      // Nettoyer l'intervalle
-      clearInterval(progressInterval);
+      // Nettoyer tous les intervalles
+      progressIntervals.forEach(interval => clearInterval(interval));
       
       if (success) {
-        // Émettre l'événement de fin de génération
-        emitGenerationEvent('cv-generation-complete', { 
-          progress: 100,
-          cvId: pendingCvId,
-          success: true
-        });
-        
-        toast({
-          title: "Succès",
-          description: "Votre CV a été généré avec succès",
+        // Progression finale
+        emitGenerationEvent('cv-generation-progress', { 
+          progress: 95,
+          cvId: pendingCvId
         });
         
         setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+          // Émettre l'événement de fin de génération
+          emitGenerationEvent('cv-generation-complete', { 
+            progress: 100,
+            cvId: pendingCvId,
+            success: true
+          });
+          
+          toast({
+            title: "Succès",
+            description: "Votre CV a été généré avec succès",
+          });
+          
+          // Rediriger vers la page d'aperçu du CV
+          setTimeout(() => {
+            navigate(`/resumes/${pendingCvId}`);
+          }, 1000);
+        }, 1000);
       } else {
+        // Nettoyer tous les intervalles
+        progressIntervals.forEach(interval => clearInterval(interval));
+        
         // Émettre l'événement d'échec
         emitGenerationEvent('cv-generation-complete', { 
           progress: 100,

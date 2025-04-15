@@ -61,7 +61,7 @@ export const generateCVApi = async (
     // Obtenir le token Firebase
     const token = await user.getIdToken(true);
     
-    console.log("Making API call to generate CV with ID:", cvId);
+    console.log("Making API call to generate CV with exact ID:", cvId);
     
     if (!cvId || cvId.trim() === "") {
       console.error("CV ID is missing or empty in generateCVApi:", cvId);
@@ -79,7 +79,7 @@ export const generateCVApi = async (
     
     // Faire l'appel API avec la nouvelle URL et le cv_id
     const requestBody = JSON.stringify({ cv_id: cvId });
-    console.log("Request body:", requestBody);
+    console.log("Request body for API call:", requestBody);
     
     const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-cv", {
       method: "POST",

@@ -38,6 +38,10 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
         const resumeName = resume.cv_name || 'CV sans nom';
         const displayKey = resumeId || `cv-${Date.now()}-${Math.random()}`;
         
+        if (!resumeId) {
+          console.warn("CV missing ID:", resume);
+        }
+        
         return (
           <Card 
             key={displayKey}

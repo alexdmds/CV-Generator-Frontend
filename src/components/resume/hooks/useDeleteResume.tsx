@@ -34,8 +34,12 @@ export const useDeleteResume = (
         return;
       }
       
-      // Supprimer le document directement en utilisant son ID
-      await deleteDoc(doc(db, "cvs", cvId));
+      // Utiliser directement l'ID du document pour le supprimer
+      const docRef = doc(db, "cvs", cvId);
+      console.log("Deleting document with ref:", docRef.path);
+      
+      await deleteDoc(docRef);
+      console.log("Document successfully deleted");
       
       // Mettre à jour l'état local
       setResumes(prev => prev.filter(resume => (resume as any).id !== cvId));

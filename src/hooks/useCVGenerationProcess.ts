@@ -34,6 +34,8 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
         return false;
       }
 
+      console.log(`Attempting to generate CV with ID: "${cvId}"`);
+
       // Mark generation as started
       setIsGenerating(true);
       setProgress(10);

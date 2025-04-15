@@ -12,7 +12,6 @@ import { RenameDialog } from "./components/RenameDialog";
 import { useResumes } from "./hooks/useResumes";
 import { JobDescriptionDialog } from "./components/JobDescriptionDialog";
 import { GenerateConfirmDialog } from "./components/GenerateConfirmDialog";
-import { generateCVApi } from "@/utils/apiService";
 import { doc, collection, setDoc } from "firebase/firestore";
 import { db } from "@/components/auth/firebase-config";
 import { useCVGeneration } from "@/hooks/useCVGeneration";
@@ -145,18 +144,29 @@ export const ResumeList = () => {
     }
     
     console.log("Confirming generation for CV ID:", pendingCvId);
-    const success = await generateCV(pendingCvId);
     
-    if (success) {
-      // Une fois la génération terminée, rafraîchir la liste des CV
-      toast({
-        title: "Succès",
-        description: "Votre CV a été généré avec succès",
-      });
+    try {
+      // Cette ligne est cruciale - nous passons explicitement l'ID du CV à la fonction generateCV
+      const success = await generateCV(pendingCvId);
       
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      if (success) {
+        // Une fois la génération terminée, rafraîchir la liste des CV
+        toast({
+          title: "Succès",
+          description: "Votre CV a été généré avec succès",
+        });
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    } catch (error) {
+      console.error("Error in handleConfirmGenerate:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la génération du CV",
+        variant: "destructive",
+      });
     }
   };
 

@@ -46,7 +46,15 @@ export const ResumeList = () => {
     }
 
     if (resume) {
-      navigate(`/resumes/${resume.id}`);
+      if ((resume as any).id) {
+        navigate(`/resumes/${(resume as any).id}`);
+      } else {
+        toast({
+          title: "Erreur",
+          description: "ID du CV manquant",
+          variant: "destructive",
+        });
+      }
     } else {
       // Ouvrir directement la boîte de dialogue pour la fiche de poste
       setJobDescriptionDialogOpen(true);
@@ -55,7 +63,10 @@ export const ResumeList = () => {
 
   const handleDeleteCV = async () => {
     if (cvToDelete) {
+      console.log("Deleting CV with ID:", cvToDelete);
       await deleteResume(cvToDelete);
+    } else {
+      console.error("No CV ID to delete");
     }
     setDeleteConfirmOpen(false);
     setCvToDelete(null);
@@ -88,6 +99,8 @@ export const ResumeList = () => {
       // Créer un document avec ID généré automatiquement
       const cvDocRef = doc(collection(db, "cvs"));
       const cvId = cvDocRef.id;
+      
+      console.log("Creating new CV document with ID:", cvId);
       
       // Générer un nom par défaut
       const defaultCvName = `CV - ${new Date().toLocaleDateString()}`;
@@ -122,6 +135,7 @@ export const ResumeList = () => {
 
   const handleConfirmGenerate = async () => {
     if (!pendingCvId) {
+      console.error("No pending CV ID for generation");
       toast({
         title: "Erreur",
         description: "Impossible de générer le CV sans identifiant",
@@ -169,13 +183,32 @@ export const ResumeList = () => {
             resumes={resumes}
             onResumeClick={handleResumeClick}
             onRenameClick={(resume) => {
-              setCvToRename(resume.id || resume.cv_name);
-              setNewCvName(resume.cv_name);
-              setRenameDialogOpen(true);
+              if ((resume as any).id) {
+                setCvToRename((resume as any).id);
+                setNewCvName(resume.cv_name);
+                setRenameDialogOpen(true);
+              } else {
+                console.error("Resume missing ID:", resume);
+                toast({
+                  title: "Erreur",
+                  description: "ID du CV manquant pour le renommage",
+                  variant: "destructive",
+                });
+              }
             }}
             onDeleteClick={(resume) => {
-              setCvToDelete(resume.id || resume.cv_name);
-              setDeleteConfirmOpen(true);
+              if ((resume as any).id) {
+                console.log("Setting CV to delete with ID:", (resume as any).id);
+                setCvToDelete((resume as any).id);
+                setDeleteConfirmOpen(true);
+              } else {
+                console.error("Resume missing ID:", resume);
+                toast({
+                  title: "Erreur",
+                  description: "ID du CV manquant pour la suppression",
+                  variant: "destructive",
+                });
+              }
             }}
           />
         </>

@@ -10,7 +10,7 @@ export const useDeleteResume = (
 ) => {
   const { toast } = useToast();
 
-  const deleteResume = async (cvName: string) => {
+  const deleteResume = async (cvId: string) => {
     const user = auth.currentUser;
     if (!user) {
       toast({
@@ -22,24 +22,23 @@ export const useDeleteResume = (
     }
 
     try {
-      // Trouver le CV dans l'état local
-      const cvToDelete = resumes.find(cv => cv.cv_name === cvName);
+      console.log("Attempting to delete CV with ID:", cvId);
       
-      if (!cvToDelete || !(cvToDelete as any).id) {
-        console.error("CV not found or missing ID:", cvName);
+      if (!cvId || cvId.trim() === "") {
+        console.error("Invalid CV ID for deletion:", cvId);
         toast({
           title: "Erreur",
-          description: "CV introuvable",
+          description: "ID de CV invalide pour la suppression",
           variant: "destructive",
         });
         return;
       }
       
       // Supprimer le document directement en utilisant son ID
-      await deleteDoc(doc(db, "cvs", (cvToDelete as any).id));
+      await deleteDoc(doc(db, "cvs", cvId));
       
       // Mettre à jour l'état local
-      setResumes(prev => prev.filter(cv => cv.cv_name !== cvName));
+      setResumes(prev => prev.filter(resume => (resume as any).id !== cvId));
       
       toast({
         title: "CV supprimé",

@@ -24,10 +24,11 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
         return false;
       }
 
-      if (!cvId) {
+      if (!cvId || cvId.trim() === "") {
+        console.error("CV ID is missing or empty:", cvId);
         toast({
           title: "Erreur",
-          description: "Identifiant du CV manquant",
+          description: "Identifiant du CV manquant ou invalide",
           variant: "destructive",
         });
         return false;
@@ -42,17 +43,18 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       const cvDoc = await getDoc(cvDocRef);
       
       if (!cvDoc.exists()) {
+        console.error("CV document not found for ID:", cvId);
         throw new Error("Document CV introuvable");
       }
       
       const cvData = cvDoc.data();
       const cvName = cvData.cv_name;
       
-      console.log("CV document found, calling generation API for:", cvId);
+      console.log("CV document found, calling generation API for ID:", cvId);
       console.log("Document data:", cvData);
       setProgress(30);
 
-      // Call generation API with the document ID
+      // Call generation API with the document ID - make sure cvId is passed correctly
       const result = await generateCVApi(user, cvId);
       
       setProgress(80);

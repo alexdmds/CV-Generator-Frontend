@@ -63,8 +63,18 @@ export const generateCVApi = async (
     
     console.log("Making API call to generate CV with ID:", cvId);
     
-    if (!cvId) {
+    if (!cvId || cvId.trim() === "") {
+      console.error("CV ID is missing or empty in generateCVApi:", cvId);
       throw new Error("L'ID du CV est manquant ou invalide");
+    }
+    
+    // Vérifier que le document existe avant de faire l'appel API
+    const cvDocRef = doc(db, "cvs", cvId);
+    const cvDoc = await getDoc(cvDocRef);
+    
+    if (!cvDoc.exists()) {
+      console.error("Document does not exist in Firestore:", cvId);
+      throw new Error("Le document CV n'existe pas dans Firestore");
     }
     
     // Faire l'appel API avec la nouvelle URL et le cv_id

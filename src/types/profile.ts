@@ -1,4 +1,3 @@
-
 export interface HeadSection {
   name: string;
   phone: string;
@@ -81,7 +80,47 @@ export interface CVData {
 }
 
 export interface CV {
-  job_raw: string;
   cv_name: string;
-  cv_data: CVData;
+  job_raw?: string;
+  job_sumup?: string;
+  cv_data: {
+    educations: Array<{
+      title: string;
+      description: string;
+      dates: string;
+      university: string;
+      location: string;
+    }>;
+    experiences: Array<{
+      company: string;
+      title: string;
+      bullets: string[];
+      dates: string;
+      location: string;
+    }>;
+    lang_of_cv: string;
+    hobbies: string;
+    languages: Array<{
+      language: string;
+      level: string;
+    }>;
+    phone: string;
+    mail: string;
+    title: string;
+    section_names: {
+      experience_section_name: string;
+      hobbies_section_name: string;
+      languages_section_name: string;
+      skills_section_name: string;
+      education_section_name: string;
+    };
+    skills: Array<{
+      skills: string[];
+      category_name: string;
+    }>;
+    name: string;
+  };
+  user_id?: string;
+  cv_url?: string;
+  id?: string;
 }

@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "@/components/auth/firebase-config";
-import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { CV } from "@/types/profile";
 
@@ -30,7 +29,7 @@ export const useResumes = () => {
         console.log("Loading CVs for user:", user.uid);
         
         try {
-          // Nouveau: Récupération des CVs depuis la collection "cvs" en filtrant par user_id
+          // Récupération des CVs depuis la collection "cvs" en filtrant par user_id
           const cvsQuery = query(collection(db, "cvs"), where("user_id", "==", user.uid));
           const cvsSnapshot = await getDocs(cvsQuery);
           
@@ -39,12 +38,12 @@ export const useResumes = () => {
           if (!cvsSnapshot.empty) {
             const cvsData = cvsSnapshot.docs.map(doc => {
               const data = doc.data();
-              // Retourne l'objet CV avec les données du document
               return {
+                id: doc.id, // Stocke l'ID du document pour la suppression
                 cv_name: data.cv_name,
                 job_raw: data.job_raw,
                 cv_data: data.cv_data
-              } as CV;
+              } as CV & { id: string };
             });
             
             console.log("CVs found:", cvsData);
@@ -98,34 +97,29 @@ export const useResumes = () => {
     }
 
     try {
-      // Nouveau: Trouver et supprimer le CV dans la collection "cvs"
-      const cvsQuery = query(
-        collection(db, "cvs"), 
-        where("user_id", "==", user.uid),
-        where("cv_name", "==", cvName)
-      );
+      // Trouver le CV dans l'état local
+      const cvToDelete = resumes.find(cv => cv.cv_name === cvName);
       
-      const querySnapshot = await getDocs(cvsQuery);
-      
-      if (!querySnapshot.empty) {
-        // Supprimer le document du CV
-        await deleteDoc(querySnapshot.docs[0].ref);
-        
-        // Mettre à jour l'état local
-        setResumes(prev => prev.filter(cv => cv.cv_name !== cvName));
-        
-        toast({
-          title: "CV supprimé",
-          description: "Le CV a été supprimé avec succès",
-        });
-      } else {
-        console.error("CV not found for deletion:", cvName);
+      if (!cvToDelete || !(cvToDelete as any).id) {
+        console.error("CV not found or missing ID:", cvName);
         toast({
           title: "Erreur",
           description: "CV introuvable",
           variant: "destructive",
         });
+        return;
       }
+      
+      // Supprimer le document directement en utilisant son ID
+      await deleteDoc(doc(db, "cvs", (cvToDelete as any).id));
+      
+      // Mettre à jour l'état local
+      setResumes(prev => prev.filter(cv => cv.cv_name !== cvName));
+      
+      toast({
+        title: "CV supprimé",
+        description: "Le CV a été supprimé avec succès",
+      });
     } catch (error) {
       console.error("Error deleting CV:", error);
       toast({
@@ -150,7 +144,7 @@ export const useResumes = () => {
     }
 
     try {
-      // Nouveau: Trouver le CV dans la collection "cvs"
+      // Trouver le CV dans la collection "cvs"
       const cvsQuery = query(
         collection(db, "cvs"), 
         where("user_id", "==", user.uid),

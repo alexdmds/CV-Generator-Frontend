@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface GenerateConfirmDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface GenerateConfirmDialogProps {
   onConfirm: () => void;
   isSubmitting: boolean;
   isGenerating?: boolean;
+  progress?: number;
 }
 
 export function GenerateConfirmDialog({
@@ -25,6 +27,7 @@ export function GenerateConfirmDialog({
   onConfirm,
   isSubmitting,
   isGenerating = false,
+  progress = 0,
 }: GenerateConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -36,6 +39,16 @@ export function GenerateConfirmDialog({
             Le processus peut prendre jusqu'à 1 minute.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        
+        {(isSubmitting || isGenerating) && (
+          <div className="py-2">
+            <Progress value={progress} className="h-2 mb-2" />
+            <p className="text-center text-sm text-muted-foreground">
+              Génération en cours... {progress}%
+            </p>
+          </div>
+        )}
+        
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isSubmitting || isGenerating}>Annuler</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} disabled={isSubmitting || isGenerating}>

@@ -3,13 +3,16 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
 import { generateCVApi } from "@/utils/apiService";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/components/auth/firebase-config";
 
 export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvName: string) => string) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
 
   // Generate a CV
-  const generateCV = async (cvName: string) => {
+  const generateCV = async (cvId: string) => {
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -23,19 +26,38 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
 
       // Mark generation as started
       setIsGenerating(true);
+      setProgress(10);
 
-      // Call generation API
-      const result = await generateCVApi(user, cvName);
+      // Récupérer le document pour obtenir le nom de CV
+      const cvDocRef = doc(db, "cvs", cvId);
+      const cvDoc = await getDoc(cvDocRef);
+      
+      if (!cvDoc.exists()) {
+        throw new Error("Document CV introuvable");
+      }
+      
+      const cvData = cvDoc.data();
+      const cvName = cvData.cv_name;
+      
+      setProgress(30);
 
-      if (result.success && result.pdfPath) {
+      // Call generation API with the document ID
+      const result = await generateCVApi(user, cvId);
+      
+      setProgress(80);
+
+      if (result.success) {
         // Refresh display with timestamp to force cache refresh
-        refreshPdfDisplay(user.uid, cvName);
+        if (cvName) {
+          refreshPdfDisplay(user.uid, cvName);
+        }
         
         toast({
           title: "Succès !",
           description: "Votre CV a été généré avec succès.",
         });
         
+        setProgress(100);
         return true;
       } else {
         throw new Error(result.message || "Échec de la génération du CV");
@@ -49,12 +71,17 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       });
       return false;
     } finally {
-      setIsGenerating(false);
+      // Reset generation state after a delay
+      setTimeout(() => {
+        setIsGenerating(false);
+        setProgress(0);
+      }, 1000);
     }
   };
 
   return {
     isGenerating,
+    progress,
     generateCV
   };
 }

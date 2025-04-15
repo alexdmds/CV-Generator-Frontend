@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { FileText, PlusCircle } from "lucide-react";
+import { FileText, PlusCircle, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/components/auth/firebase-config";
 import { CV } from "@/types/profile";
@@ -11,6 +11,11 @@ import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 import { RenameDialog } from "./components/RenameDialog";
 import { useResumes } from "./hooks/useResumes";
 import { JobDescriptionDialog } from "./components/JobDescriptionDialog";
+import { GenerateConfirmDialog } from "./components/GenerateConfirmDialog";
+import { generateCVApi } from "@/utils/apiService";
+import { doc, collection, setDoc } from "firebase/firestore";
+import { db } from "@/components/auth/firebase-config";
+import { useCVGeneration } from "@/hooks/useCVGeneration";
 
 export const ResumeList = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -20,9 +25,13 @@ export const ResumeList = () => {
   const [newCvName, setNewCvName] = useState("");
   const [jobDescriptionDialogOpen, setJobDescriptionDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingJobDescription, setPendingJobDescription] = useState("");
+  const [pendingCvId, setPendingCvId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { resumes, isLoading, deleteResume, renameResume } = useResumes();
+  const { isGenerating, progress, generateCV } = useCVGeneration();
 
   const handleResumeClick = (resume?: CV) => {
     const user = auth.currentUser;
@@ -37,7 +46,7 @@ export const ResumeList = () => {
     }
 
     if (resume) {
-      navigate(`/resumes/${resume.cv_name}`);
+      navigate(`/resumes/${resume.id}`);
     } else {
       // Ouvrir directement la boîte de dialogue pour la fiche de poste
       setJobDescriptionDialogOpen(true);
@@ -59,6 +68,73 @@ export const ResumeList = () => {
     setRenameDialogOpen(false);
     setCvToRename(null);
     setNewCvName("");
+  };
+
+  const handleJobDescriptionSubmit = async (jobDescription: string) => {
+    setIsSubmitting(true);
+    setPendingJobDescription(jobDescription);
+    
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour créer un CV",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Créer un document avec ID généré automatiquement
+      const cvDocRef = doc(collection(db, "cvs"));
+      const cvId = cvDocRef.id;
+      
+      // Générer un nom par défaut
+      const defaultCvName = `CV - ${new Date().toLocaleDateString()}`;
+      
+      // Sauvegarder le document
+      await setDoc(cvDocRef, {
+        user_id: user.uid,
+        cv_id: cvId,
+        cv_name: defaultCvName,
+        job_raw: jobDescription,
+        job_sumup: "",
+        creation_date: new Date().toISOString()
+      });
+      
+      setJobDescriptionDialogOpen(false);
+      setPendingCvId(cvId);
+      setConfirmDialogOpen(true);
+      
+    } catch (error) {
+      console.error("Error creating CV:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la création du CV",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmGenerate = async () => {
+    if (!pendingCvId) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le CV sans identifiant",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const success = await generateCV(pendingCvId);
+    if (success) {
+      // Une fois la génération terminée, rafraîchir la liste des CV
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    }
   };
 
   return (
@@ -84,12 +160,12 @@ export const ResumeList = () => {
             resumes={resumes}
             onResumeClick={handleResumeClick}
             onRenameClick={(resume) => {
-              setCvToRename(resume.cv_name);
+              setCvToRename(resume.id || resume.cv_name);
               setNewCvName(resume.cv_name);
               setRenameDialogOpen(true);
             }}
             onDeleteClick={(resume) => {
-              setCvToDelete(resume.cv_name);
+              setCvToDelete(resume.id || resume.cv_name);
               setDeleteConfirmOpen(true);
             }}
           />
@@ -113,8 +189,17 @@ export const ResumeList = () => {
       <JobDescriptionDialog 
         open={jobDescriptionDialogOpen}
         onOpenChange={setJobDescriptionDialogOpen}
-        onConfirm={(jobDescription) => navigate(`/resumes/new?jobDescription=${encodeURIComponent(jobDescription)}`)}
+        onConfirm={handleJobDescriptionSubmit}
         isSubmitting={isSubmitting}
+      />
+
+      <GenerateConfirmDialog 
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        onConfirm={handleConfirmGenerate}
+        isSubmitting={isSubmitting}
+        isGenerating={isGenerating}
+        progress={progress}
       />
     </div>
   );

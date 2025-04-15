@@ -25,6 +25,7 @@ export function useCVGeneration() {
   // Use the CV generation process hook
   const {
     isGenerating,
+    progress,
     generateCV
   } = useCVGenerationProcess(refreshPdfDisplay);
 
@@ -45,6 +46,7 @@ export function useCVGeneration() {
     
     // CV generation
     isGenerating,
+    progress,
     generateCV
   };
 }

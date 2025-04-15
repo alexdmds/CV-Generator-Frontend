@@ -2,8 +2,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { Progress } from "@/components/ui/progress";
 
 interface JobDescriptionDialogProps {
   open: boolean;
@@ -25,25 +26,12 @@ export function JobDescriptionDialog({
     if (jobDescription.trim()) {
       onConfirm(jobDescription);
       setJobDescription("");
-      onOpenChange(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
-        <div className="absolute right-4 top-4 opacity-70">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 rounded-full" 
-            onClick={() => onOpenChange(false)}
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Fermer</span>
-          </Button>
-        </div>
-        
         <DialogHeader>
           <DialogTitle>Nouvelle fiche de poste</DialogTitle>
         </DialogHeader>

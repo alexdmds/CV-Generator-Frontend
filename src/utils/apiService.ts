@@ -55,20 +55,20 @@ export const getStoragePdfUrl = async (userId: string, cvName: string): Promise<
  */
 export const generateCVApi = async (
   user: User,
-  cvName: string
+  cvId: string
 ): Promise<GenerateCVResponse> => {
   try {
     // Obtenir le token Firebase
     const token = await user.getIdToken(true);
     
-    // Faire l'appel API
-    const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/generate-cv", {
+    // Faire l'appel API avec la nouvelle URL et le cv_id
+    const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-cv", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
       },
-      body: JSON.stringify({ cv_name: cvName }),
+      body: JSON.stringify({ cv_id: cvId }),
     });
 
     if (!response.ok) {
@@ -78,12 +78,9 @@ export const generateCVApi = async (
     const data = await response.json();
     console.log("CV generation API response:", data);
     
-    // Utiliser directement l'URL construite sans vérification
-    const pdfUrl = getDirectPdfUrl(user.uid, cvName);
-    
     return {
       success: true,
-      pdfPath: pdfUrl
+      message: "CV généré avec succès"
     };
   } catch (error) {
     console.error("Error calling CV generation API:", error);

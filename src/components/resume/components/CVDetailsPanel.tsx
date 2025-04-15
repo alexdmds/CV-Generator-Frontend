@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, FileDescription as FileIcon } from "lucide-react";
+import { FileText, FileIcon } from "lucide-react";
 
 interface CVDetailsPanelProps {
   cvName: string;

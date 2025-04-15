@@ -28,9 +28,10 @@ export const useProfileSave = (
       }
 
       try {
-        const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, { profile: profile }, { merge: true });
-        console.log("Profil mis à jour dans Firestore sous profile");
+        // Changement principal: utilisation de la collection "profiles" au lieu de "users"
+        const profileDocRef = doc(db, "profiles", user.uid);
+        await setDoc(profileDocRef, profile);
+        console.log("Profil mis à jour dans Firestore dans la collection profiles");
         
         setOriginalProfile(deepCopy(profile));
         

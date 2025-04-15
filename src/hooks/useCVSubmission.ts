@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
-import { doc, setDoc, collection } from "firebase/firestore";
+import { doc, setDoc, collection, getDoc } from "firebase/firestore";
 import { db } from "@/components/auth/firebase-config";
 import { createCVFromProfile } from "@/utils/cvFactory";
 
@@ -45,9 +45,9 @@ export function useCVSubmission() {
       
       // Récupérer le profil utilisateur
       const profileDocRef = doc(db, "profiles", user.uid);
-      const userProfile = await profileDocRef.get();
+      const profileDoc = await getDoc(profileDocRef);
       
-      if (!userProfile.exists()) {
+      if (!profileDoc.exists()) {
         toast({
           title: "Profil manquant",
           description: "Vous devez d'abord créer votre profil",
@@ -61,7 +61,7 @@ export function useCVSubmission() {
       const actualCvName = cvName || `CV - ${new Date().toLocaleDateString()}`;
       
       // Créer l'objet CV
-      const profileData = userProfile.data();
+      const profileData = profileDoc.data();
       const newCV = createCVFromProfile(profileData, jobDescription, actualCvName);
       
       // Sauvegarder le document avec son ID unique

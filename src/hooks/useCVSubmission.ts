@@ -6,6 +6,7 @@ import { auth } from "@/components/auth/firebase-config";
 import { doc, setDoc, collection, getDoc } from "firebase/firestore";
 import { db } from "@/components/auth/firebase-config";
 import { createCVFromProfile } from "@/utils/cvFactory";
+import { Profile } from "@/types/profile";
 
 export function useCVSubmission() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export function useCVSubmission() {
       const actualCvName = cvName || `CV - ${new Date().toLocaleDateString()}`;
       
       // Créer l'objet CV
-      const profileData = profileDoc.data();
+      const profileData = profileDoc.data() as Profile;
       const newCV = createCVFromProfile(profileData, jobDescription, actualCvName);
       
       // Sauvegarder le document avec son ID unique

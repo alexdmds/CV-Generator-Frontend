@@ -21,7 +21,7 @@ export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: st
   }));
 
   // Create section names based on language
-  const sections_name = {
+  const section_names = {
     experience_section_name: language === "français" ? "Expérience professionnelle" : "Professional experience",
     hobbies_section_name: language === "français" ? "Centres d'intérêt" : "Hobbies",
     languages_section_name: language === "français" ? "Langues" : "Languages",
@@ -44,7 +44,7 @@ export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: st
     phone: profile.head.phone,
     mail: profile.head.mail,
     title: profile.head.title,
-    sections_name,
+    section_names,
     skills: skillsList,
     experiences,
     name: profile.head.name

@@ -1,3 +1,4 @@
+
 export interface HeadSection {
   name: string;
   phone: string;
@@ -73,7 +74,7 @@ export interface CVData {
   phone: string;
   mail: string;
   title: string;
-  sections_name: CVSectionNames;
+  section_names: CVSectionNames;
   skills: Skill[];
   experiences: CVExperience[];
   name: string;

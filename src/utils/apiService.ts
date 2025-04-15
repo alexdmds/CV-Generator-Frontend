@@ -81,6 +81,10 @@ export const generateCVApi = async (
     const requestBody = JSON.stringify({ cv_id: cvId });
     console.log("Request body for API call:", requestBody);
     
+    // Timeout de 90 secondes (1min30)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    
     const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-cv", {
       method: "POST",
       headers: {
@@ -88,7 +92,10 @@ export const generateCVApi = async (
         "Authorization": `Bearer ${token}`,
       },
       body: requestBody,
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     console.log("API Response status:", response.status);
     console.log("API Response headers:", Object.fromEntries([...response.headers]));
@@ -108,6 +115,15 @@ export const generateCVApi = async (
     };
   } catch (error) {
     console.error("Error calling CV generation API:", error);
+    
+    // Handle abort error differently
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return {
+        success: false,
+        message: "La génération a pris trop de temps et a été annulée. Veuillez réessayer."
+      };
+    }
+    
     return {
       success: false,
       message: error instanceof Error ? error.message : "Une erreur est survenue"

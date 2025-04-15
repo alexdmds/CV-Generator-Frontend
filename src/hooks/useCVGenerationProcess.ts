@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
@@ -40,7 +39,7 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
 
       // Mark generation as started
       setIsGenerating(true);
-      setProgress(10);
+      setProgress(5);
 
       // Récupérer le document pour obtenir le nom de CV
       const cvDocRef = doc(db, "cvs", cvId);
@@ -61,12 +60,23 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       
       console.log("CV document found, calling generation API for ID:", cvId);
       console.log("Document data:", cvData);
-      setProgress(30);
+      setProgress(15);
+
+      // Simulation de progression pendant l'appel API
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          // Increment progress gradually, but keep it below 95% until complete
+          const newProgress = prev + Math.random() * 2;
+          return newProgress > 90 ? 90 : newProgress;
+        });
+      }, 2000);
 
       // Call generation API with the document ID
       const result = await generateCVApi(user, cvId);
       
-      setProgress(80);
+      // Clear interval and set progress to completion
+      clearInterval(progressInterval);
+      setProgress(95);
 
       if (result.success) {
         // Refresh display with timestamp to force cache refresh
@@ -93,11 +103,11 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       });
       return false;
     } finally {
-      // Reset generation state after a delay
+      // Reset generation state after a delay to allow user to see completion
       setTimeout(() => {
         setIsGenerating(false);
         setProgress(0);
-      }, 1000);
+      }, 1500);
     }
   };
 

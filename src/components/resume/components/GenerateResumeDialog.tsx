@@ -6,6 +6,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { doc, collection, setDoc } from "firebase/firestore";
 import { db, auth } from "@/components/auth/firebase-config";
 import { useCVGeneration } from "@/hooks/useCVGeneration";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 
 interface GenerateResumeDialogProps {
   jobDescriptionDialogOpen: boolean;

@@ -61,6 +61,8 @@ export const generateCVApi = async (
     // Obtenir le token Firebase
     const token = await user.getIdToken(true);
     
+    console.log("Making API call to generate CV with ID:", cvId);
+    
     // Faire l'appel API avec la nouvelle URL et le cv_id
     const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-cv", {
       method: "POST",
@@ -72,7 +74,9 @@ export const generateCVApi = async (
     });
 
     if (!response.ok) {
-      throw new Error(`Erreur API: ${response.status}`);
+      const errorText = await response.text();
+      console.error("API Error response:", response.status, errorText);
+      throw new Error(`Erreur API: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

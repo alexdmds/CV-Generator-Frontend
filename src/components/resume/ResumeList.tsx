@@ -92,7 +92,7 @@ export const ResumeList = () => {
       // Générer un nom par défaut
       const defaultCvName = `CV - ${new Date().toLocaleDateString()}`;
       
-      // Sauvegarder le document
+      // Sauvegarder le document avec les données minimales requises
       await setDoc(cvDocRef, {
         user_id: user.uid,
         cv_id: cvId,
@@ -101,6 +101,8 @@ export const ResumeList = () => {
         job_sumup: "",
         creation_date: new Date().toISOString()
       });
+      
+      console.log("Document CV créé avec succès:", cvId);
       
       setJobDescriptionDialogOpen(false);
       setPendingCvId(cvId);
@@ -131,6 +133,11 @@ export const ResumeList = () => {
     const success = await generateCV(pendingCvId);
     if (success) {
       // Une fois la génération terminée, rafraîchir la liste des CV
+      toast({
+        title: "Succès",
+        description: "Votre CV a été généré avec succès",
+      });
+      
       setTimeout(() => {
         window.location.reload();
       }, 1500);

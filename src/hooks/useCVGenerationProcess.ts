@@ -39,6 +39,7 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       const cvData = cvDoc.data();
       const cvName = cvData.cv_name;
       
+      console.log("CV document found, calling generation API for:", cvId);
       setProgress(30);
 
       // Call generation API with the document ID

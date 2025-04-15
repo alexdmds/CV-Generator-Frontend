@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { FileText, PlusCircle, Loader2 } from "lucide-react";
@@ -141,6 +142,7 @@ export const ResumeList = () => {
     console.log("Confirming generation for CV ID:", pendingCvId);
     
     try {
+      // Appel explicite avec l'ID exact du document
       const success = await generateCV(pendingCvId);
       
       if (success) {

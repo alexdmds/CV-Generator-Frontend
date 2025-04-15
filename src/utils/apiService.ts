@@ -61,7 +61,7 @@ export const generateCVApi = async (
     // Obtenir le token Firebase
     const token = await user.getIdToken(true);
     
-    console.log("Making API call to generate CV with exact ID:", cvId);
+    console.log("Making API call to generate CV with ID:", cvId);
     
     if (!cvId || cvId.trim() === "") {
       console.error("CV ID is missing or empty in generateCVApi:", cvId);

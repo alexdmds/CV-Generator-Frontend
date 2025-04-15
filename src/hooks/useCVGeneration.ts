@@ -22,7 +22,7 @@ export function useCVGeneration() {
     retryCheckForExistingCV
   } = useCVExistenceCheck(setPdfUrl);
 
-  // Use the CV generation process hook
+  // Use the CV generation process hook with the refreshPdfDisplay function
   const {
     isGenerating,
     progress,
@@ -44,9 +44,12 @@ export function useCVGeneration() {
     checkExistingCVAndDisplay,
     retryCheckForExistingCV: (cvName: string) => retryCheckForExistingCV(cvName),
     
-    // CV generation
+    // CV generation - ensure ID is passed through
     isGenerating,
     progress,
-    generateCV
+    generateCV: (cvId: string) => {
+      console.log("useCVGeneration.generateCV called with ID:", cvId);
+      return generateCV(cvId);
+    }
   };
 }

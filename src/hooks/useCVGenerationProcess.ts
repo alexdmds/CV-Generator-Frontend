@@ -13,6 +13,8 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
 
   // Generate a CV
   const generateCV = async (cvId: string) => {
+    console.log(`generateCV function called with cvId: "${cvId}"`);
+    
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -46,7 +48,12 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       
       if (!cvDoc.exists()) {
         console.error("CV document not found for ID:", cvId);
-        throw new Error("Document CV introuvable");
+        toast({
+          title: "Erreur",
+          description: "Document CV introuvable",
+          variant: "destructive",
+        });
+        return false;
       }
       
       const cvData = cvDoc.data();
@@ -56,7 +63,7 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       console.log("Document data:", cvData);
       setProgress(30);
 
-      // Call generation API with the document ID - make sure cvId is passed correctly
+      // Call generation API with the document ID
       const result = await generateCVApi(user, cvId);
       
       setProgress(80);

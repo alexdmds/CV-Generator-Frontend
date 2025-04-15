@@ -31,8 +31,8 @@ export function GenerateConfirmDialog({
 }: GenerateConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={(isOpen) => {
-      // Prevent closing the dialog while generating
-      if (isGenerating && !isOpen) {
+      // Prevent closing the dialog while submitting
+      if (isSubmitting && !isOpen) {
         return;
       }
       onOpenChange(isOpen);
@@ -40,34 +40,34 @@ export function GenerateConfirmDialog({
       <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {isGenerating ? "Génération en cours..." : "Générer le CV"}
+            {isSubmitting ? "Préparation en cours..." : "Générer le CV"}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {isGenerating 
-              ? "La génération de votre CV est en cours. Cette opération peut prendre jusqu'à 1 minute 30."
+            {isSubmitting 
+              ? "Nous préparons votre demande de génération..."
               : "Assurez-vous que votre profil est bien renseigné dans la section \"Profil\" avant de générer le CV. Le processus peut prendre jusqu'à 1 minute 30."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         
-        {(isSubmitting || isGenerating) && (
+        {isSubmitting && (
           <div className="py-4">
             <Progress value={progress} className="h-2 mb-3" />
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <p>Génération en cours... {progress}%</p>
+              <p>Préparation en cours... {progress.toFixed(0)}%</p>
             </div>
           </div>
         )}
         
         <AlertDialogFooter>
-          {isGenerating ? (
+          {isSubmitting ? (
             <p className="text-xs text-muted-foreground w-full text-center">
-              Veuillez ne pas fermer cette page pendant la génération
+              Veuillez patienter pendant la préparation
             </p>
           ) : (
             <>
-              <AlertDialogCancel disabled={isSubmitting || isGenerating}>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={onConfirm} disabled={isSubmitting || isGenerating}>
+              <AlertDialogCancel disabled={isSubmitting}>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={onConfirm} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

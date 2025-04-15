@@ -25,8 +25,18 @@ export function GenerateResumeDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingJobDescription, setPendingJobDescription] = useState("");
   const [pendingCvId, setPendingCvId] = useState<string | null>(null);
+  const [pendingCvName, setPendingCvName] = useState<string | null>(null);
   const { toast } = useToast();
   const { isGenerating, progress, generateCV } = useCVGeneration();
+
+  // Fonction pour émettre des événements de progression de la génération
+  const emitGenerationEvent = (eventName: string, data: any = {}) => {
+    const event = new CustomEvent(eventName, { 
+      detail: data,
+      bubbles: true 
+    });
+    window.dispatchEvent(event);
+  };
 
   const handleJobDescriptionSubmit = async (jobDescription: string) => {
     setIsSubmitting(true);
@@ -63,6 +73,7 @@ export function GenerateResumeDialog({
       
       setJobDescriptionDialogOpen(false);
       setPendingCvId(cvId);
+      setPendingCvName(defaultCvName);
       setConfirmDialogOpen(true);
       
     } catch (error) {
@@ -91,10 +102,42 @@ export function GenerateResumeDialog({
     console.log("Confirming generation for CV ID:", pendingCvId);
     
     try {
+      // Fermer la boîte de dialogue de confirmation
+      setConfirmDialogOpen(false);
+      
+      // Émettre l'événement de début de génération
+      emitGenerationEvent('cv-generation-start', { 
+        progress: 5, 
+        cvId: pendingCvId,
+        cvName: pendingCvName
+      });
+      
+      // Configurer un intervalle pour simuler une progression en attendant l'API
+      const progressInterval = setInterval(() => {
+        // Mettre à jour la progression jusqu'à 90%
+        const newProgress = Math.min(progress + Math.random() * 5, 90);
+        
+        // Émettre l'événement de progression
+        emitGenerationEvent('cv-generation-progress', { 
+          progress: newProgress,
+          cvId: pendingCvId
+        });
+      }, 2000);
+      
       // Appel explicite avec l'ID exact du document
       const success = await generateCV(pendingCvId);
       
+      // Nettoyer l'intervalle
+      clearInterval(progressInterval);
+      
       if (success) {
+        // Émettre l'événement de fin de génération
+        emitGenerationEvent('cv-generation-complete', { 
+          progress: 100,
+          cvId: pendingCvId,
+          success: true
+        });
+        
         toast({
           title: "Succès",
           description: "Votre CV a été généré avec succès",
@@ -102,10 +145,32 @@ export function GenerateResumeDialog({
         
         setTimeout(() => {
           window.location.reload();
-        }, 1500);
+        }, 2000);
+      } else {
+        // Émettre l'événement d'échec
+        emitGenerationEvent('cv-generation-complete', { 
+          progress: 100,
+          cvId: pendingCvId,
+          success: false
+        });
+        
+        toast({
+          title: "Erreur",
+          description: "Une erreur est survenue lors de la génération du CV",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error in handleConfirmGenerate:", error);
+      
+      // Émettre l'événement d'échec
+      emitGenerationEvent('cv-generation-complete', { 
+        progress: 100,
+        cvId: pendingCvId,
+        success: false,
+        error: error
+      });
+      
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la génération du CV",

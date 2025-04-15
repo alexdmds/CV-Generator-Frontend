@@ -130,7 +130,9 @@ export const ResumeList = () => {
       return;
     }
     
+    console.log("Confirming generation for CV ID:", pendingCvId);
     const success = await generateCV(pendingCvId);
+    
     if (success) {
       // Une fois la génération terminée, rafraîchir la liste des CV
       toast({

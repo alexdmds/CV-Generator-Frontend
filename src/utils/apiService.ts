@@ -63,14 +63,21 @@ export const generateCVApi = async (
     
     console.log("Making API call to generate CV with ID:", cvId);
     
+    if (!cvId) {
+      throw new Error("L'ID du CV est manquant ou invalide");
+    }
+    
     // Faire l'appel API avec la nouvelle URL et le cv_id
+    const requestBody = JSON.stringify({ cv_id: cvId });
+    console.log("Request body:", requestBody);
+    
     const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-cv", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
       },
-      body: JSON.stringify({ cv_id: cvId }),
+      body: requestBody,
     });
 
     if (!response.ok) {

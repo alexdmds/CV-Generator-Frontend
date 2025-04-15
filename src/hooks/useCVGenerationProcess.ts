@@ -24,6 +24,15 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
         return false;
       }
 
+      if (!cvId) {
+        toast({
+          title: "Erreur",
+          description: "Identifiant du CV manquant",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       // Mark generation as started
       setIsGenerating(true);
       setProgress(10);
@@ -40,6 +49,7 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       const cvName = cvData.cv_name;
       
       console.log("CV document found, calling generation API for:", cvId);
+      console.log("Document data:", cvData);
       setProgress(30);
 
       // Call generation API with the document ID

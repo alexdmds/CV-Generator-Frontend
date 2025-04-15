@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, FileText, RefreshCcw, FileX } from "lucide-react";
+import { Loader2, FileText, RefreshCcw, FileX, ExternalLink } from "lucide-react";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useCallback } from "react";
 import { auth } from "@/components/auth/firebase-config";
@@ -11,9 +11,10 @@ interface CVPreviewPanelProps {
   isChecking: boolean;
   pdfUrl: string | null;
   cvName: string;
+  cvId?: string;
   checkFailed: boolean;
   retryCheckForExistingCV: (cvName: string) => void;
-  refreshPdfDisplay: (userId: string, cvName: string) => string;
+  refreshPdfDisplay: (userId: string, cvId: string, cvName?: string) => string;
 }
 
 export function CVPreviewPanel({
@@ -21,6 +22,7 @@ export function CVPreviewPanel({
   isChecking,
   pdfUrl,
   cvName,
+  cvId,
   checkFailed,
   retryCheckForExistingCV,
   refreshPdfDisplay
@@ -28,10 +30,12 @@ export function CVPreviewPanel({
   // Function to force PDF refresh
   const handleRefreshPdf = useCallback(() => {
     const user = auth.currentUser;
-    if (user && cvName) {
+    if (user && cvId) {
+      refreshPdfDisplay(user.uid, cvId, cvName);
+    } else if (user && cvName) {
       refreshPdfDisplay(user.uid, cvName);
     }
-  }, [cvName, refreshPdfDisplay]);
+  }, [cvId, cvName, refreshPdfDisplay]);
 
   // Function to handle retry
   const handleRetry = useCallback(() => {
@@ -39,9 +43,9 @@ export function CVPreviewPanel({
   }, [retryCheckForExistingCV, cvName]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+    <Card className="shadow-lg border-gray-200">
+      <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+        <CardTitle className="flex items-center justify-between text-gray-800">
           <span>Aperçu du CV</span>
           {isChecking && (
             <div className="flex items-center text-sm text-gray-500">
@@ -62,7 +66,7 @@ export function CVPreviewPanel({
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {isGenerating ? (
           <div className="p-6 text-center">
             <ProfileGeneratingIndicator 
@@ -70,10 +74,10 @@ export function CVPreviewPanel({
             />
           </div>
         ) : pdfUrl ? (
-          <div className="rounded-md overflow-hidden border border-gray-300">
+          <div className="overflow-hidden rounded-b-md">
             <iframe 
               src={pdfUrl}
-              className="w-full h-[500px]"
+              className="w-full h-[650px] border-0"
               title="CV généré"
               key={pdfUrl} // Force iframe reset when URL changes
               onError={() => {
@@ -81,20 +85,21 @@ export function CVPreviewPanel({
                 handleRetry();
               }}
             />
-            <div className="mt-4 flex justify-center space-x-4">
+            <div className="flex justify-center space-x-4 py-4 bg-gray-50 border-t">
               <Button 
                 variant="default" 
                 onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                <FileText className="w-4 h-4 mr-2" />
-                Voir le PDF
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Ouvrir en plein écran
               </Button>
               <Button 
                 variant="outline" 
                 onClick={handleRefreshPdf}
               >
                 <RefreshCcw className="w-4 h-4 mr-2" />
-                Rafraîchir
+                Actualiser
               </Button>
             </div>
           </div>

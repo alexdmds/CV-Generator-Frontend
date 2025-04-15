@@ -5,15 +5,22 @@ import { useResumeForm } from "@/hooks/useResumeForm";
 import { CvNameDialog } from "@/components/resume/components/CvNameDialog";
 import { JobDescriptionForm } from "@/components/resume/components/JobDescriptionForm";
 import { GenerateConfirmDialog } from "@/components/resume/components/GenerateConfirmDialog";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CVPreviewPanel } from "@/components/resume/components/CVPreviewPanel";
 import { CVNameHeader } from "@/components/resume/components/CVNameHeader";
 import { BackToResumesButton } from "@/components/resume/components/BackToResumesButton";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useParams } from "react-router-dom";
+import { CVDetailsPanel } from "@/components/resume/components/CVDetailsPanel";
+import { db } from "@/components/auth/firebase-config";
+import { doc, getDoc } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ResumeForm = () => {
   const [searchParams] = useSearchParams();
+  const { id } = useParams<{ id: string }>();
   const jobDescriptionParam = searchParams.get('jobDescription');
+  const [jobSumup, setJobSumup] = useState<string | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   
   const {
     jobDescription,
@@ -42,6 +49,33 @@ const ResumeForm = () => {
     refreshPdfDisplay
   } = useResumeForm();
 
+  // Fetch CV details including job_sumup if in view mode
+  useEffect(() => {
+    const fetchCVDetails = async () => {
+      if (id && id !== 'new') {
+        try {
+          setIsLoadingDetails(true);
+          const cvDocRef = doc(db, "cvs", id);
+          const cvDoc = await getDoc(cvDocRef);
+          
+          if (cvDoc.exists()) {
+            const cvData = cvDoc.data();
+            setJobDescription(cvData.job_raw || "");
+            setCvName(cvData.cv_name || "");
+            setJobSumup(cvData.job_sumup || null);
+            console.log("CV data loaded for view:", cvData);
+          }
+        } catch (error) {
+          console.error("Error loading CV details:", error);
+        } finally {
+          setIsLoadingDetails(false);
+        }
+      }
+    };
+    
+    fetchCVDetails();
+  }, [id, setCvName, setJobDescription]);
+
   // Récupérer la fiche de poste depuis l'URL si disponible
   useEffect(() => {
     if (jobDescriptionParam && !jobDescription) {
@@ -61,13 +95,7 @@ const ResumeForm = () => {
     }
   }, [cvName, checkForExistingCV, hasCheckedForExistingCV, isCheckingInProgress]);
 
-  const handleCreateClick = async () => {
-    await handleCreateNewCV();
-  };
-
-  const handleRenameClick = () => {
-    handleDialogOpenChange(true);
-  };
+  const isViewMode = id && id !== 'new';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,33 +106,59 @@ const ResumeForm = () => {
           disabled={isSubmitting || isGenerating} 
         />
         
-        <CVNameHeader 
-          cvName={cvName} 
-          onRenameClick={handleRenameClick} 
-          isGenerating={isGenerating} 
-        />
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold text-gray-800">{cvName}</h1>
+        </div>
         
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Fiche de poste (toujours affichée) */}
+        <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto">
+          {/* Détails du CV (toujours affichés en mode visualisation) */}
           <div className="flex-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {isEditing ? "Modifier le CV" : "Nouveau CV"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <JobDescriptionForm 
-                  jobDescription={jobDescription}
-                  setJobDescription={setJobDescription}
-                  onGenerateClick={handleGenerateResume}
-                  onSaveClick={handleSaveJobDescription}
-                  isEditing={isEditing}
+            {isViewMode ? (
+              isLoadingDetails ? (
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-8 w-[200px]" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Skeleton className="h-4 w-[100px]" />
+                      <Skeleton className="h-8 w-full" />
+                      
+                      <Skeleton className="h-4 w-[150px] mt-6" />
+                      <Skeleton className="h-24 w-full" />
+                      
+                      <Skeleton className="h-4 w-[150px] mt-6" />
+                      <Skeleton className="h-48 w-full" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <CVDetailsPanel 
                   cvName={cvName}
-                  isSubmitting={isSubmitting || isGenerating}
+                  jobDescription={jobDescription}
+                  jobSumup={jobSumup}
                 />
-              </CardContent>
-            </Card>
+              )
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {isEditing ? "Modifier le CV" : "Nouveau CV"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <JobDescriptionForm 
+                    jobDescription={jobDescription}
+                    setJobDescription={setJobDescription}
+                    onGenerateClick={handleGenerateResume}
+                    onSaveClick={handleSaveJobDescription}
+                    isEditing={isEditing}
+                    cvName={cvName}
+                    isSubmitting={isSubmitting || isGenerating}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
           
           {/* Panneau latéral pour le CV */}
@@ -114,6 +168,7 @@ const ResumeForm = () => {
               isChecking={isChecking}
               pdfUrl={pdfUrl}
               cvName={cvName}
+              cvId={id}
               checkFailed={checkFailed}
               retryCheckForExistingCV={retryCheckForExistingCV}
               refreshPdfDisplay={refreshPdfDisplay}
@@ -122,22 +177,26 @@ const ResumeForm = () => {
         </div>
       </div>
       
-      <CvNameDialog
-        open={cvNameDialogOpen}
-        onOpenChange={handleDialogOpenChange}
-        cvName={cvName}
-        setCvName={setCvName}
-        onCreateClick={handleCreateClick}
-        isSubmitting={isSubmitting}
-      />
+      {!isViewMode && (
+        <>
+          <CvNameDialog
+            open={cvNameDialogOpen}
+            onOpenChange={handleDialogOpenChange}
+            cvName={cvName}
+            setCvName={setCvName}
+            onCreateClick={handleCreateNewCV}
+            isSubmitting={isSubmitting}
+          />
 
-      <GenerateConfirmDialog 
-        open={confirmDialogOpen}
-        onOpenChange={setConfirmDialogOpen}
-        onConfirm={confirmGenerateCV}
-        isSubmitting={isSubmitting}
-        isGenerating={isGenerating}
-      />
+          <GenerateConfirmDialog 
+            open={confirmDialogOpen}
+            onOpenChange={setConfirmDialogOpen}
+            onConfirm={confirmGenerateCV}
+            isSubmitting={isSubmitting}
+            isGenerating={isGenerating}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -7,13 +7,13 @@ export function usePdfUrlManager() {
   const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);
 
   // Get immediate PDF URL without verification
-  const getImmediatePdfUrl = (userId: string, cvName: string): string => {
-    return getDirectPdfUrl(userId, cvName);
+  const getImmediatePdfUrl = (userId: string, cvIdOrName: string, cvName?: string): string => {
+    return getDirectPdfUrl(userId, cvIdOrName, cvName);
   };
 
   // Refresh PDF display with timestamp to force reload
-  const refreshPdfDisplay = (userId: string, cvName: string) => {
-    const refreshedUrl = getImmediatePdfUrl(userId, cvName) + `?t=${Date.now()}`;
+  const refreshPdfDisplay = (userId: string, cvIdOrName: string, cvName?: string) => {
+    const refreshedUrl = getImmediatePdfUrl(userId, cvIdOrName, cvName) + `?t=${Date.now()}`;
     console.log("Refreshing PDF display with URL:", refreshedUrl);
     setPdfUrl(refreshedUrl);
     setLastGenerationTime(Date.now());
@@ -21,11 +21,11 @@ export function usePdfUrlManager() {
   };
 
   // Load a known PDF directly
-  const loadKnownPdf = (userId: string, cvName: string): boolean => {
-    if (!userId || !cvName) return false;
+  const loadKnownPdf = (userId: string, cvIdOrName: string, cvName?: string): boolean => {
+    if (!userId || !cvIdOrName) return false;
     
     try {
-      const directUrl = getImmediatePdfUrl(userId, cvName);
+      const directUrl = getImmediatePdfUrl(userId, cvIdOrName, cvName);
       setPdfUrl(directUrl);
       return true;
     } catch (error) {

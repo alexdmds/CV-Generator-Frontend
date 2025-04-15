@@ -12,10 +12,10 @@ interface GenerateCVResponse {
 }
 
 // Méthode simplifiée pour obtenir l'URL directe sans passer par Firebase
-export const getDirectPdfUrl = (userId: string, cvName: string): string => {
+export const getDirectPdfUrl = (userId: string, cvIdOrName: string, cvName?: string): string => {
   // Utiliser la structure directe du bucket public
-  const encodedName = encodeURIComponent(cvName);
-  return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedName}.pdf`;
+  const encodedId = encodeURIComponent(cvIdOrName);
+  return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedId}.pdf`;
 };
 
 /**
@@ -45,9 +45,9 @@ export const checkExistingCV = async (
  * Récupère l'URL d'un PDF dans Firebase Storage
  * Version non-bloquante limitée à une seule tentative rapide
  */
-export const getStoragePdfUrl = async (userId: string, cvName: string): Promise<string | null> => {
+export const getStoragePdfUrl = async (userId: string, cvIdOrName: string, cvName?: string): Promise<string | null> => {
   // Renvoyer directement l'URL construite sans vérification
-  return getDirectPdfUrl(userId, cvName);
+  return getDirectPdfUrl(userId, cvIdOrName, cvName);
 };
 
 /**

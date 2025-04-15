@@ -10,7 +10,7 @@ interface CvNameDialogProps {
   onOpenChange: (open: boolean) => void;
   cvName: string;
   setCvName: (name: string) => void;
-  onCreateClick: () => Promise<void>;
+  onCreateClick: () => Promise<boolean>;  // Updated to match the actual return type
   isSubmitting?: boolean;
 }
 

@@ -89,6 +89,9 @@ export const generateCVApi = async (
       },
       body: requestBody,
     });
+    
+    console.log("API Response status:", response.status);
+    console.log("API Response headers:", Object.fromEntries([...response.headers]));
 
     if (!response.ok) {
       const errorText = await response.text();

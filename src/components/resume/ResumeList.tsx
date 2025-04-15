@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { FileText, PlusCircle, Loader2 } from "lucide-react";
@@ -55,7 +54,6 @@ export const ResumeList = () => {
         });
       }
     } else {
-      // Ouvrir directement la boîte de dialogue pour la fiche de poste
       setJobDescriptionDialogOpen(true);
     }
   };
@@ -95,16 +93,13 @@ export const ResumeList = () => {
         return;
       }
       
-      // Créer un document avec ID généré automatiquement
       const cvDocRef = doc(collection(db, "cvs"));
       const cvId = cvDocRef.id;
       
       console.log("Creating new CV document with ID:", cvId);
       
-      // Générer un nom par défaut
       const defaultCvName = `CV - ${new Date().toLocaleDateString()}`;
       
-      // Sauvegarder le document avec les données minimales requises
       await setDoc(cvDocRef, {
         user_id: user.uid,
         cv_id: cvId,
@@ -146,11 +141,9 @@ export const ResumeList = () => {
     console.log("Confirming generation for CV ID:", pendingCvId);
     
     try {
-      // Cette ligne est cruciale - nous passons explicitement l'ID du CV à la fonction generateCV
       const success = await generateCV(pendingCvId);
       
       if (success) {
-        // Une fois la génération terminée, rafraîchir la liste des CV
         toast({
           title: "Succès",
           description: "Votre CV a été généré avec succès",

@@ -10,8 +10,7 @@ import { ResumesGrid } from "./components/ResumesGrid";
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 import { RenameDialog } from "./components/RenameDialog";
 import { useResumes } from "./hooks/useResumes";
-import { CvNameDialog } from "./components/CvNameDialog";
-import { saveCVToFirestore } from "@/utils/cvUtils";
+import { JobDescriptionDialog } from "./components/JobDescriptionDialog";
 
 export const ResumeList = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -19,8 +18,7 @@ export const ResumeList = () => {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [cvToRename, setCvToRename] = useState<string | null>(null);
   const [newCvName, setNewCvName] = useState("");
-  const [cvNameDialogOpen, setCvNameDialogOpen] = useState(false);
-  const [newCvNameInput, setNewCvNameInput] = useState("");
+  const [jobDescriptionDialogOpen, setJobDescriptionDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -41,45 +39,8 @@ export const ResumeList = () => {
     if (resume) {
       navigate(`/resumes/${resume.cv_name}`);
     } else {
-      // Open the dialog instead of navigating directly
-      setNewCvNameInput("");
-      setCvNameDialogOpen(true);
-    }
-  };
-
-  const handleCreateNewCV = async () => {
-    setIsSubmitting(true);
-    try {
-      if (!newCvNameInput.trim()) {
-        return;
-      }
-      
-      const user = auth.currentUser;
-      if (!user) {
-        toast({
-          title: "Erreur d'authentification",
-          description: "Vous devez être connecté pour créer un CV",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-
-      // Save the CV to Firestore with an empty job description
-      const saved = await saveCVToFirestore({
-        user,
-        cvName: newCvNameInput,
-        jobDescription: "",
-        toast
-      });
-      
-      if (saved) {
-        // Navigate to the new CV edit page
-        navigate(`/resumes/${encodeURIComponent(newCvNameInput)}`);
-        setCvNameDialogOpen(false);
-      }
-    } finally {
-      setIsSubmitting(false);
+      // Ouvrir directement la boîte de dialogue pour la fiche de poste
+      setJobDescriptionDialogOpen(true);
     }
   };
 
@@ -149,12 +110,10 @@ export const ResumeList = () => {
         onConfirm={handleRenameCV}
       />
 
-      <CvNameDialog 
-        open={cvNameDialogOpen}
-        onOpenChange={setCvNameDialogOpen}
-        cvName={newCvNameInput}
-        setCvName={setNewCvNameInput}
-        onCreateClick={handleCreateNewCV}
+      <JobDescriptionDialog 
+        open={jobDescriptionDialogOpen}
+        onOpenChange={setJobDescriptionDialogOpen}
+        onConfirm={(jobDescription) => navigate(`/resumes/new?jobDescription=${encodeURIComponent(jobDescription)}`)}
         isSubmitting={isSubmitting}
       />
     </div>

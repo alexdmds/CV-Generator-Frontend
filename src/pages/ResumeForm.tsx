@@ -9,8 +9,12 @@ import { useEffect } from "react";
 import { CVPreviewPanel } from "@/components/resume/components/CVPreviewPanel";
 import { CVNameHeader } from "@/components/resume/components/CVNameHeader";
 import { BackToResumesButton } from "@/components/resume/components/BackToResumesButton";
+import { useSearchParams } from "react-router-dom";
 
 const ResumeForm = () => {
+  const [searchParams] = useSearchParams();
+  const jobDescriptionParam = searchParams.get('jobDescription');
+  
   const {
     jobDescription,
     setJobDescription,
@@ -37,6 +41,17 @@ const ResumeForm = () => {
     retryCheckForExistingCV,
     refreshPdfDisplay
   } = useResumeForm();
+
+  // Récupérer la fiche de poste depuis l'URL si disponible
+  useEffect(() => {
+    if (jobDescriptionParam && !jobDescription) {
+      setJobDescription(decodeURIComponent(jobDescriptionParam));
+      // Si c'est un nouveau CV, on ouvre la boîte de dialogue pour le nommer
+      if (!isEditing) {
+        handleDialogOpenChange(true);
+      }
+    }
+  }, [jobDescriptionParam, jobDescription, setJobDescription, isEditing, handleDialogOpenChange]);
 
   // On vérifie l'existence du CV en arrière-plan, sans bloquer l'interface
   useEffect(() => {

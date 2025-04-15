@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { db, auth } from "@/components/auth/firebase-config";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { CV } from "@/types/profile";
 
 export function useCVData() {
@@ -33,27 +33,39 @@ export function useCVData() {
         setIsEditing(true);
         
         try {
-          // Nouveau: Récupérer le CV depuis la collection "cvs"
-          const cvsQuery = query(
-            collection(db, "cvs"), 
-            where("user_id", "==", user.uid),
-            where("cv_name", "==", id)
-          );
+          // Essayer d'abord de récupérer le CV par son ID document
+          const cvDocRef = doc(db, "cvs", id);
+          const cvDoc = await getDoc(cvDocRef);
           
-          const querySnapshot = await getDocs(cvsQuery);
-          
-          if (!querySnapshot.empty) {
-            const cvData = querySnapshot.docs[0].data();
+          if (cvDoc.exists()) {
+            // CV trouvé par ID
+            const cvData = cvDoc.data();
             setJobDescription(cvData.job_raw || "");
             setCvName(cvData.cv_name || "");
-            console.log("CV data loaded:", cvData);
+            console.log("CV data loaded by document ID:", cvData);
           } else {
-            toast({
-              title: "CV introuvable",
-              description: "Le CV demandé n'existe pas",
-              variant: "destructive",
-            });
-            navigate("/resumes");
+            // Sinon, essayer avec l'ancienne méthode par cv_name
+            const cvsQuery = query(
+              collection(db, "cvs"), 
+              where("user_id", "==", user.uid),
+              where("cv_name", "==", id)
+            );
+            
+            const querySnapshot = await getDocs(cvsQuery);
+            
+            if (!querySnapshot.empty) {
+              const cvData = querySnapshot.docs[0].data();
+              setJobDescription(cvData.job_raw || "");
+              setCvName(cvData.cv_name || "");
+              console.log("CV data loaded by name:", cvData);
+            } else {
+              toast({
+                title: "CV introuvable",
+                description: "Le CV demandé n'existe pas",
+                variant: "destructive",
+              });
+              navigate("/resumes");
+            }
           }
         } catch (error) {
           console.error("Error loading CV data:", error);

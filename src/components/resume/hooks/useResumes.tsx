@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "@/components/auth/firebase-config";
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { CV } from "@/types/profile";
 
@@ -28,23 +28,29 @@ export const useResumes = () => {
         }
 
         console.log("Loading CVs for user:", user.uid);
-        const userDocRef = doc(db, "users", user.uid);
-        console.log("User document reference:", userDocRef.path);
         
         try {
-          const userDoc = await getDoc(userDocRef);
-          console.log("User document exists:", userDoc.exists());
+          // Nouveau: Récupération des CVs depuis la collection "cvs" en filtrant par user_id
+          const cvsQuery = query(collection(db, "cvs"), where("user_id", "==", user.uid));
+          const cvsSnapshot = await getDocs(cvsQuery);
           
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            console.log("User document data:", userData);
-            const cvs = userData.cvs || [];
-            console.log("CVs found:", cvs);
-            setResumes(cvs);
+          console.log("CVs snapshot size:", cvsSnapshot.size);
+          
+          if (!cvsSnapshot.empty) {
+            const cvsData = cvsSnapshot.docs.map(doc => {
+              const data = doc.data();
+              // Retourne l'objet CV avec les données du document
+              return {
+                cv_name: data.cv_name,
+                job_raw: data.job_raw,
+                cv_data: data.cv_data
+              } as CV;
+            });
+            
+            console.log("CVs found:", cvsData);
+            setResumes(cvsData);
           } else {
-            console.log("No user document found, creating empty document");
-            // Create user document if it doesn't exist
-            await setDoc(userDocRef, { cvs: [], profile: {} });
+            console.log("No CVs found for user");
             setResumes([]);
           }
         } catch (error) {
@@ -92,24 +98,32 @@ export const useResumes = () => {
     }
 
     try {
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
+      // Nouveau: Trouver et supprimer le CV dans la collection "cvs"
+      const cvsQuery = query(
+        collection(db, "cvs"), 
+        where("user_id", "==", user.uid),
+        where("cv_name", "==", cvName)
+      );
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const cvs = userData.cvs || [];
+      const querySnapshot = await getDocs(cvsQuery);
+      
+      if (!querySnapshot.empty) {
+        // Supprimer le document du CV
+        await deleteDoc(querySnapshot.docs[0].ref);
         
-        // Filter out the CV to delete
-        const updatedCvs = cvs.filter((cv: CV) => cv.cv_name !== cvName);
-        console.log("Deleting CV. Updated CVs:", updatedCvs);
+        // Mettre à jour l'état local
+        setResumes(prev => prev.filter(cv => cv.cv_name !== cvName));
         
-        // Update the user document with the updated CVs array
-        await updateDoc(userDocRef, { cvs: updatedCvs });
-        
-        setResumes(updatedCvs);
         toast({
           title: "CV supprimé",
           description: "Le CV a été supprimé avec succès",
+        });
+      } else {
+        console.error("CV not found for deletion:", cvName);
+        toast({
+          title: "Erreur",
+          description: "CV introuvable",
+          variant: "destructive",
         });
       }
     } catch (error) {
@@ -136,30 +150,43 @@ export const useResumes = () => {
     }
 
     try {
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
+      // Nouveau: Trouver le CV dans la collection "cvs"
+      const cvsQuery = query(
+        collection(db, "cvs"), 
+        where("user_id", "==", user.uid),
+        where("cv_name", "==", oldName)
+      );
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const cvs = userData.cvs || [];
+      const querySnapshot = await getDocs(cvsQuery);
+      
+      if (!querySnapshot.empty) {
+        // Récupérer les données du CV
+        const cvData = querySnapshot.docs[0].data();
         
-        // Update the CV name
-        const updatedCvs = cvs.map((cv: CV) => {
+        // Mettre à jour le nom du CV
+        cvData.cv_name = newName;
+        
+        // Mise à jour du document
+        await updateDoc(querySnapshot.docs[0].ref, cvData);
+        
+        // Mettre à jour l'état local
+        setResumes(prev => prev.map(cv => {
           if (cv.cv_name === oldName) {
             return { ...cv, cv_name: newName };
           }
           return cv;
-        });
+        }));
         
-        console.log("Renaming CV. Updated CVs:", updatedCvs);
-        
-        // Update the user document with the updated CVs array
-        await updateDoc(userDocRef, { cvs: updatedCvs });
-        
-        setResumes(updatedCvs);
         toast({
           title: "CV renommé",
           description: "Le CV a été renommé avec succès",
+        });
+      } else {
+        console.error("CV not found for renaming:", oldName);
+        toast({
+          title: "Erreur",
+          description: "CV introuvable",
+          variant: "destructive",
         });
       }
     } catch (error) {

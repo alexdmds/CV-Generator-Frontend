@@ -1,6 +1,5 @@
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { FileText, PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +24,7 @@ export const ResumeList = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { resumes, deleteResume, renameResume } = useResumes();
+  const { resumes, isLoading, deleteResume, renameResume } = useResumes();
 
   const handleResumeClick = (resume?: CV) => {
     const user = auth.currentUser;
@@ -102,19 +101,24 @@ export const ResumeList = () => {
   };
 
   return (
-    <>
-      <Card className="w-full max-w-4xl mx-auto animate-fadeIn">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl font-bold">Mes CV</CardTitle>
-          <Button
-            onClick={() => handleResumeClick()}
-            className="flex items-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Nouveau CV
-          </Button>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-6">
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="w-12 h-12 mx-auto border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
+          <p className="mt-4 text-gray-500">Chargement de vos CVs...</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-end">
+            <Button
+              onClick={() => handleResumeClick()}
+              className="flex items-center gap-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Nouveau CV
+            </Button>
+          </div>
+          
           <ResumesGrid 
             resumes={resumes}
             onResumeClick={handleResumeClick}
@@ -128,8 +132,8 @@ export const ResumeList = () => {
               setDeleteConfirmOpen(true);
             }}
           />
-        </CardContent>
-      </Card>
+        </>
+      )}
 
       <DeleteConfirmDialog 
         open={deleteConfirmOpen}
@@ -153,6 +157,6 @@ export const ResumeList = () => {
         onCreateClick={handleCreateNewCV}
         isSubmitting={isSubmitting}
       />
-    </>
+    </div>
   );
 };

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { db, auth } from "@/components/auth/firebase-config";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { CV } from "@/types/profile";
 
 export function useCVData() {
@@ -33,25 +33,27 @@ export function useCVData() {
         setIsEditing(true);
         
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
+          // Nouveau: Récupérer le CV depuis la collection "cvs"
+          const cvsQuery = query(
+            collection(db, "cvs"), 
+            where("user_id", "==", user.uid),
+            where("cv_name", "==", id)
+          );
           
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const cvs = userData.cvs || [];
-            const cv = cvs.find((cv: CV) => cv.cv_name === id);
-            
-            if (cv) {
-              setJobDescription(cv.job_raw || "");
-              setCvName(cv.cv_name || "");
-            } else {
-              toast({
-                title: "CV introuvable",
-                description: "Le CV demandé n'existe pas",
-                variant: "destructive",
-              });
-              navigate("/resumes");
-            }
+          const querySnapshot = await getDocs(cvsQuery);
+          
+          if (!querySnapshot.empty) {
+            const cvData = querySnapshot.docs[0].data();
+            setJobDescription(cvData.job_raw || "");
+            setCvName(cvData.cv_name || "");
+            console.log("CV data loaded:", cvData);
+          } else {
+            toast({
+              title: "CV introuvable",
+              description: "Le CV demandé n'existe pas",
+              variant: "destructive",
+            });
+            navigate("/resumes");
           }
         } catch (error) {
           console.error("Error loading CV data:", error);

@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, FileDescription } from "lucide-react";
+import { FileText, FileDescription as FileIcon } from "lucide-react";
 
 interface CVDetailsPanelProps {
   cvName: string;
@@ -26,7 +26,7 @@ export function CVDetailsPanel({ cvName, jobDescription, jobSumup }: CVDetailsPa
         {jobSumup && (
           <div>
             <h3 className="text-lg font-medium mb-2 text-gray-800 flex items-center">
-              <FileDescription className="w-4 h-4 mr-2 text-amber-600" />
+              <FileIcon className="w-4 h-4 mr-2 text-amber-600" />
               Résumé de la fiche de poste
             </h3>
             <div className="p-3 bg-amber-50 rounded-md border border-amber-100 text-gray-700 whitespace-pre-wrap">

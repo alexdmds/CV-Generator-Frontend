@@ -1,11 +1,10 @@
-
 import { Profile, CV, CVData, CVEducation, CVExperience, Language, Skill } from "@/types/profile";
 
 export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: string, language: string = "français"): CV => {
   // Transform educations
   const educations = profile.educations.map(edu => ({
     title: edu.title,
-    description: edu.full_descriptions,
+    description: edu.description,
     dates: edu.dates,
     university: edu.university,
     location: "" // This field needs to be filled by user
@@ -15,13 +14,13 @@ export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: st
   const experiences = profile.experiences.map(exp => ({
     company: exp.company,
     title: exp.title,
-    bullets: exp.full_descriptions.split("\n").filter(bullet => bullet.trim() !== ""), // Split by newlines to create bullets
+    bullets: exp.description.split("\n").filter(bullet => bullet.trim() !== ""), // Changed from full_descriptions to description
     dates: exp.dates,
     location: exp.location
   }));
 
   // Create section names based on language
-  const sections_name = {
+  const section_names = {
     experience_section_name: language === "français" ? "Expérience professionnelle" : "Professional experience",
     hobbies_section_name: language === "français" ? "Centres d'intérêt" : "Hobbies",
     languages_section_name: language === "français" ? "Langues" : "Languages",
@@ -36,7 +35,7 @@ export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: st
   const skillsList: Skill[] = parseSkills(profile.skills);
 
   // Create CV data
-  const cvData: CVData = {
+  const cvData: any = {
     educations,
     lang_of_cv: language,
     hobbies: profile.hobbies,
@@ -44,7 +43,7 @@ export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: st
     phone: profile.head.phone,
     mail: profile.head.mail,
     title: profile.head.title,
-    sections_name,
+    section_names,
     skills: skillsList,
     experiences,
     name: profile.head.name
@@ -87,9 +86,14 @@ function parseSkills(skillsString: string): Skill[] {
     return [];
   }
   
-  // For simplicity, we'll just create one category with all skills
+  // Convert the skills string to an array format
+  const skillLines = skillsString.split("\n")
+    .filter(line => line.trim() !== "")
+    .map(line => line.trim());
+  
+  // For simplicity, we'll create one category with all skills as an array
   return [{
     category_name: "Compétences techniques",
-    skills: skillsString
+    skills: skillLines // Now we're returning skills as string[]
   }];
 }

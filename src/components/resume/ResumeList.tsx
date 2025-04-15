@@ -1,31 +1,28 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { FileText, PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/components/auth/firebase-config";
 import { CV } from "@/types/profile";
 import { useToast } from "@/components/ui/use-toast";
 import { ResumesGrid } from "./components/ResumesGrid";
-import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
-import { RenameDialog } from "./components/RenameDialog";
 import { useResumes } from "./hooks/useResumes";
-import { CvNameDialog } from "./components/CvNameDialog";
-import { saveCVToFirestore } from "@/utils/cvUtils";
+import { GenerateResumeDialog } from "./components/GenerateResumeDialog";
+import { ResumeActions } from "./components/ResumeActions";
+import { ResumeLoadingState } from "./components/ResumeLoadingState";
+import { NewResumeButton } from "./components/NewResumeButton";
 
 export const ResumeList = () => {
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [cvToDelete, setCvToDelete] = useState<string | null>(null);
-  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
-  const [cvToRename, setCvToRename] = useState<string | null>(null);
-  const [newCvName, setNewCvName] = useState("");
-  const [cvNameDialogOpen, setCvNameDialogOpen] = useState(false);
-  const [newCvNameInput, setNewCvNameInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [jobDescriptionDialogOpen, setJobDescriptionDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { resumes, deleteResume, renameResume } = useResumes();
+  const { resumes, isLoading, deleteResume, renameResume } = useResumes();
+  
+  // Use the ResumeActions component
+  const resumeActions = ResumeActions({ 
+    deleteResume, 
+    renameResume 
+  });
 
   const handleResumeClick = (resume?: CV) => {
     const user = auth.currentUser;
@@ -40,119 +37,78 @@ export const ResumeList = () => {
     }
 
     if (resume) {
-      navigate(`/resumes/${resume.cv_name}`);
-    } else {
-      // Open the dialog instead of navigating directly
-      setNewCvNameInput("");
-      setCvNameDialogOpen(true);
-    }
-  };
-
-  const handleCreateNewCV = async () => {
-    setIsSubmitting(true);
-    try {
-      if (!newCvNameInput.trim()) {
-        return;
-      }
-      
-      const user = auth.currentUser;
-      if (!user) {
+      const resumeId = (resume as any).id;
+      if (resumeId) {
+        console.log("Navigating to resume with ID:", resumeId);
+        navigate(`/resumes/${resumeId}`);
+      } else {
+        console.error("Resume missing ID:", resume);
         toast({
-          title: "Erreur d'authentification",
-          description: "Vous devez être connecté pour créer un CV",
+          title: "Erreur",
+          description: "ID du CV manquant",
           variant: "destructive",
         });
-        navigate("/login");
-        return;
       }
-
-      // Save the CV to Firestore with an empty job description
-      const saved = await saveCVToFirestore({
-        user,
-        cvName: newCvNameInput,
-        jobDescription: "",
-        toast
-      });
-      
-      if (saved) {
-        // Navigate to the new CV edit page
-        navigate(`/resumes/${encodeURIComponent(newCvNameInput)}`);
-        setCvNameDialogOpen(false);
-      }
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      setJobDescriptionDialogOpen(true);
     }
-  };
-
-  const handleDeleteCV = async () => {
-    if (cvToDelete) {
-      await deleteResume(cvToDelete);
-    }
-    setDeleteConfirmOpen(false);
-    setCvToDelete(null);
-  };
-
-  const handleRenameCV = async () => {
-    if (cvToRename && newCvName) {
-      await renameResume(cvToRename, newCvName);
-    }
-    setRenameDialogOpen(false);
-    setCvToRename(null);
-    setNewCvName("");
   };
 
   return (
-    <>
-      <Card className="w-full max-w-4xl mx-auto animate-fadeIn">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl font-bold">Mes CV</CardTitle>
-          <Button
-            onClick={() => handleResumeClick()}
-            className="flex items-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Nouveau CV
-          </Button>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-6">
+      {isLoading ? (
+        <ResumeLoadingState />
+      ) : (
+        <>
+          <NewResumeButton onClick={() => handleResumeClick()} />
+          
           <ResumesGrid 
             resumes={resumes}
             onResumeClick={handleResumeClick}
             onRenameClick={(resume) => {
-              setCvToRename(resume.cv_name);
-              setNewCvName(resume.cv_name);
-              setRenameDialogOpen(true);
+              const resumeId = (resume as any).id;
+              if (resumeId) {
+                console.log("Setting CV to rename with ID:", resumeId);
+                resumeActions.setCvToRename(resumeId);
+                resumeActions.setNewCvName(resume.cv_name);
+                resumeActions.setRenameDialogOpen(true);
+              } else {
+                console.error("Resume missing ID:", resume);
+                toast({
+                  title: "Erreur",
+                  description: "ID du CV manquant pour le renommage",
+                  variant: "destructive",
+                });
+              }
             }}
             onDeleteClick={(resume) => {
-              setCvToDelete(resume.cv_name);
-              setDeleteConfirmOpen(true);
+              const resumeId = (resume as any).id;
+              if (resumeId) {
+                console.log("Setting CV to delete with ID:", resumeId);
+                resumeActions.setCvToDelete(resumeId);
+                resumeActions.setDeleteConfirmOpen(true);
+              } else {
+                console.error("Resume missing ID:", resume);
+                toast({
+                  title: "Erreur",
+                  description: "ID du CV manquant pour la suppression",
+                  variant: "destructive",
+                });
+              }
             }}
           />
-        </CardContent>
-      </Card>
+        </>
+      )}
 
-      <DeleteConfirmDialog 
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        onConfirm={handleDeleteCV}
+      {/* Dialog components */}
+      {resumeActions.dialogs}
+      
+      <GenerateResumeDialog
+        jobDescriptionDialogOpen={jobDescriptionDialogOpen}
+        setJobDescriptionDialogOpen={setJobDescriptionDialogOpen}
+        confirmDialogOpen={confirmDialogOpen}
+        setConfirmDialogOpen={setConfirmDialogOpen}
       />
-
-      <RenameDialog 
-        open={renameDialogOpen}
-        onOpenChange={setRenameDialogOpen}
-        newName={newCvName}
-        onNewNameChange={setNewCvName}
-        onConfirm={handleRenameCV}
-      />
-
-      <CvNameDialog 
-        open={cvNameDialogOpen}
-        onOpenChange={setCvNameDialogOpen}
-        cvName={newCvNameInput}
-        setCvName={setNewCvNameInput}
-        onCreateClick={handleCreateNewCV}
-        isSubmitting={isSubmitting}
-      />
-    </>
+    </div>
   );
 };

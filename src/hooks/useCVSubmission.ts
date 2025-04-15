@@ -3,8 +3,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { auth } from "@/components/auth/firebase-config";
-import { saveCVToFirestore } from "@/utils/cvUtils";
-import { validateCV } from "@/utils/cvValidation";
+import { doc, setDoc, collection, getDoc } from "firebase/firestore";
+import { db } from "@/components/auth/firebase-config";
+import { createCVFromProfile } from "@/utils/cvFactory";
+import { Profile } from "@/types/profile";
 
 export function useCVSubmission() {
   const navigate = useNavigate();
@@ -13,11 +15,10 @@ export function useCVSubmission() {
 
   // Function to handle creating or updating a CV
   const handleSubmitCV = async (cvName: string, jobDescription: string, shouldNavigate: boolean = true) => {
-    const validation = validateCV(cvName, jobDescription);
-    if (!validation.valid) {
+    if (!jobDescription.trim()) {
       toast({
         title: "Erreur",
-        description: validation.message || "Veuillez vérifier les informations saisies",
+        description: "La fiche de poste est obligatoire",
         variant: "destructive",
       });
       
@@ -39,22 +40,52 @@ export function useCVSubmission() {
     console.log("Starting CV save process...");
 
     try {
-      const saved = await saveCVToFirestore({
-        user,
-        cvName,
-        jobDescription,
-        toast
+      // Générer un ID unique pour le document
+      const cvDocRef = doc(collection(db, "cvs"));
+      const uniqueId = cvDocRef.id;
+      
+      // Récupérer le profil utilisateur
+      const profileDocRef = doc(db, "profiles", user.uid);
+      const profileDoc = await getDoc(profileDocRef);
+      
+      if (!profileDoc.exists()) {
+        toast({
+          title: "Profil manquant",
+          description: "Vous devez d'abord créer votre profil",
+          variant: "destructive",
+        });
+        navigate("/profile");
+        return false;
+      }
+      
+      // Générer un nom de CV par défaut si non fourni
+      const actualCvName = cvName || `CV - ${new Date().toLocaleDateString()}`;
+      
+      // Créer l'objet CV
+      const profileData = profileDoc.data() as Profile;
+      const newCV = createCVFromProfile(profileData, jobDescription, actualCvName);
+      
+      // Sauvegarder le document avec son ID unique
+      await setDoc(cvDocRef, {
+        user_id: user.uid,
+        cv_id: uniqueId,
+        cv_name: actualCvName,
+        job_raw: jobDescription,
+        job_sumup: "", // À remplir plus tard
+        cv_data: newCV.cv_data
       });
       
-      if (saved) {
-        if (shouldNavigate) {
-          // Navigate back to resumes list
-          console.log("CV saved successfully, navigating back to resumes list");
-          navigate("/resumes");
-        }
-        return true;
+      toast({
+        title: "Succès !",
+        description: "Votre CV a été sauvegardé avec succès.",
+      });
+      
+      if (shouldNavigate) {
+        console.log("CV saved successfully, navigating to edit page");
+        navigate(`/resumes/${uniqueId}`);
       }
-      return false;
+      
+      return true;
     } catch (error) {
       console.error("Error saving CV:", error);
       toast({
@@ -70,9 +101,7 @@ export function useCVSubmission() {
   
   // Simplified wrapper for creating a new CV
   const handleCreateNewCV = async (cvName: string, jobDescription: string) => {
-    // For new CVs, we'll navigate only if there's a job description already provided
-    const shouldNavigate = jobDescription.trim().length > 0;
-    return handleSubmitCV(cvName, jobDescription, shouldNavigate);
+    return handleSubmitCV(cvName, jobDescription, true);
   };
 
   // Simplified wrapper for updating an existing CV

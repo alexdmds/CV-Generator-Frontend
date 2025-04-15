@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface GenerateConfirmDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface GenerateConfirmDialogProps {
   onConfirm: () => void;
   isSubmitting: boolean;
   isGenerating?: boolean;
+  progress?: number;
 }
 
 export function GenerateConfirmDialog({
@@ -25,29 +27,58 @@ export function GenerateConfirmDialog({
   onConfirm,
   isSubmitting,
   isGenerating = false,
+  progress = 0,
 }: GenerateConfirmDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+    <AlertDialog open={open} onOpenChange={(isOpen) => {
+      // Prevent closing the dialog while submitting
+      if (isSubmitting && !isOpen) {
+        return;
+      }
+      onOpenChange(isOpen);
+    }}>
+      <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>Générer le CV</AlertDialogTitle>
+          <AlertDialogTitle>
+            {isSubmitting ? "Préparation en cours..." : "Générer le CV"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Assurez-vous que votre profil est bien renseigné dans la section "Profil" avant de générer le CV.
-            Le processus peut prendre jusqu'à 1 minute.
+            {isSubmitting 
+              ? "Nous préparons votre demande de génération..."
+              : "Assurez-vous que votre profil est bien renseigné dans la section \"Profil\" avant de générer le CV. Le processus peut prendre jusqu'à 1 minute 30."}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        
+        {isSubmitting && (
+          <div className="py-4">
+            <Progress value={progress} className="h-3 mb-3 bg-gray-200" />
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <p>Préparation en cours... {Math.round(progress)}%</p>
+            </div>
+          </div>
+        )}
+        
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting || isGenerating}>Annuler</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={isSubmitting || isGenerating}>
-            {isSubmitting || isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Génération en cours...
-              </>
-            ) : (
-              "Confirmer"
-            )}
-          </AlertDialogAction>
+          {isSubmitting ? (
+            <p className="text-xs text-muted-foreground w-full text-center">
+              Veuillez patienter pendant la préparation
+            </p>
+          ) : (
+            <>
+              <AlertDialogCancel disabled={isSubmitting}>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={onConfirm} disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Préparation...
+                  </>
+                ) : (
+                  "Confirmer"
+                )}
+              </AlertDialogAction>
+            </>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

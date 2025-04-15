@@ -12,8 +12,11 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
   const navigate = useNavigate();
 
   // Check if a CV exists and display it
-  const checkExistingCVAndDisplay = async (cvName: string, showToast = true) => {
-    if (!cvName) return false;
+  const checkExistingCVAndDisplay = async (cvId: string, showToast = true) => {
+    if (!cvId) {
+      console.error("No CV ID provided for existence check");
+      return false;
+    }
     
     try {
       const user = auth.currentUser;
@@ -27,33 +30,29 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
         return false;
       }
 
-      // Get direct URL immediately
-      const immediateUrl = getDirectPdfUrl(user.uid, cvName);
+      // Get direct URL immediately with current timestamp to prevent caching
+      const immediateUrl = `${getDirectPdfUrl(user.uid, cvId)}?t=${Date.now()}`;
+      console.log(`Attempting to display CV with direct URL: ${immediateUrl}`);
       setPdfUrl(immediateUrl);
       
       // Mark background check as started
       setIsChecking(true);
       setCheckFailed(false);
       
-      console.log(`Checking for existing CV in background: ${cvName}`);
+      console.log(`Checking for existing CV in background: ${cvId}`);
 
-      // Verify in background but don't block UI
-      setTimeout(async () => {
-        try {
-          if (showToast) {
-            toast({
-              title: "CV chargé",
-              description: "Le CV est disponible",
-            });
-          }
-          
-          // Check is complete
-          setIsChecking(false);
-        } catch (error) {
-          console.error("Background check error:", error);
-          setIsChecking(false);
+      // Simple timeout to simulate the check and give UI time to update
+      setTimeout(() => {
+        if (showToast) {
+          toast({
+            title: "CV chargé",
+            description: "Le CV est disponible",
+          });
         }
-      }, 0);
+        
+        // Check is complete
+        setIsChecking(false);
+      }, 1000);
       
       return true;
     } catch (error) {
@@ -65,9 +64,10 @@ export function useCVExistenceCheck(setPdfUrl: (url: string | null) => void) {
   };
 
   // Retry checking for an existing CV
-  const retryCheckForExistingCV = async (cvName: string) => {
+  const retryCheckForExistingCV = async (cvId: string) => {
+    console.log("Retrying CV existence check for:", cvId);
     setCheckFailed(false);
-    return checkExistingCVAndDisplay(cvName);
+    return checkExistingCVAndDisplay(cvId);
   };
 
   return {

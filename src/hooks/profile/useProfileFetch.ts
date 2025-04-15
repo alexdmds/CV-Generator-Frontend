@@ -36,6 +36,36 @@ export const useProfileFetch = (
       if (profileDoc.exists()) {
         console.log("Profil récupéré depuis Firestore (collection profiles):", profileDoc.data());
         const loadedProfile = profileDoc.data() as Profile;
+
+        // Vérification des champs d'expérience et de formation
+        if (loadedProfile.experiences) {
+          // Conversion du champ "full_descriptions" vers "description" si nécessaire
+          loadedProfile.experiences = loadedProfile.experiences.map(exp => {
+            if ('full_descriptions' in exp) {
+              return {
+                ...exp,
+                description: exp.full_descriptions || '',
+                full_descriptions: undefined
+              };
+            }
+            return exp;
+          });
+        }
+
+        if (loadedProfile.educations) {
+          // Conversion du champ "full_descriptions" vers "description" si nécessaire
+          loadedProfile.educations = loadedProfile.educations.map(edu => {
+            if ('full_descriptions' in edu) {
+              return {
+                ...edu,
+                description: edu.full_descriptions || '',
+                full_descriptions: undefined
+              };
+            }
+            return edu;
+          });
+        }
+
         setProfile(loadedProfile);
         setOriginalProfile(deepCopy(loadedProfile));
         setIsLoading(false);
@@ -68,6 +98,22 @@ export const useProfileFetch = (
 
       const data = await response.json();
       console.log("Profil récupéré depuis l'API:", data);
+
+      // S'assurer que les champs sont correctement mappés 
+      if (data.experiences) {
+        data.experiences = data.experiences.map(exp => ({
+          ...exp,
+          description: exp.description || exp.full_descriptions || ''
+        }));
+      }
+
+      if (data.educations) {
+        data.educations = data.educations.map(edu => ({
+          ...edu,
+          description: edu.description || edu.full_descriptions || ''
+        }));
+      }
+
       setProfile(data);
       setOriginalProfile(deepCopy(data));
       

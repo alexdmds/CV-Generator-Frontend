@@ -1,3 +1,4 @@
+
 export interface HeadSection {
   name: string;
   phone: string;
@@ -11,14 +12,14 @@ export interface Experience {
   company: string;
   location: string;
   dates: string;
-  full_descriptions: string;
+  description: string; // Modifié de full_descriptions à description
 }
 
 export interface Education {
   title: string;
   university: string;
   dates: string;
-  full_descriptions: string;
+  description: string; // Modifié de full_descriptions à description
 }
 
 export interface Language {

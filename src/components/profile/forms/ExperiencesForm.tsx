@@ -21,8 +21,15 @@ export const ExperiencesForm = ({
   const [experiences, setExperiences] = useState(initialData);
   const [savedSections, setSavedSections] = useState<boolean>(false);
   const lastChangedTimeRef = useRef<number>(0);
+  const firstRenderRef = useRef<boolean>(true);
 
   useEffect(() => {
+    // Skip the first render to avoid infinite update loops
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false;
+      return;
+    }
+    
     lastChangedTimeRef.current = Date.now();
     setSavedSections(false);
     onSave(experiences);
@@ -47,7 +54,7 @@ export const ExperiencesForm = ({
       company: "",
       location: "",
       dates: "",
-      full_descriptions: ""
+      description: ""
     }]);
   };
 
@@ -134,8 +141,8 @@ export const ExperiencesForm = ({
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Textarea 
-              value={experience.full_descriptions} 
-              onChange={(e) => updateExperience(index, 'full_descriptions', e.target.value)}
+              value={experience.description} 
+              onChange={(e) => updateExperience(index, 'description', e.target.value)}
               placeholder="Description des responsabilités et réalisations"
               rows={4}
               className={savedSections ? savedAnimation : savedFieldStyle}

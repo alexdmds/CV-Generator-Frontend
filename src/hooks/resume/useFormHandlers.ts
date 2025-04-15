@@ -19,12 +19,12 @@ export function useFormHandlers(
     openConfirmDialog();
   }, [openConfirmDialog]);
 
-  const handleSaveJobDescription = useCallback(() => {
+  const handleSaveJobDescription = useCallback(async () => {
     return handleSaveJobDescriptionWithState(true);
   }, [handleSaveJobDescriptionWithState]);
 
   const handleCreateClick = useCallback(async () => {
-    await handleCreateNewCV();
+    return await handleCreateNewCV();
   }, [handleCreateNewCV]);
 
   return {

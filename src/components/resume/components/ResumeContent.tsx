@@ -13,7 +13,7 @@ interface ResumeContentProps {
   jobSumup: string | null;
   setJobDescription: (description: string) => void;
   handleGenerateResume: () => void;
-  handleSaveJobDescription: () => void;
+  handleSaveJobDescription: () => Promise<boolean>;
   isEditing: boolean;
   isSubmitting: boolean;
   isGenerating: boolean;

@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useCVData } from "../useCVData";
 import { useCVInitialization } from "../useCVInitialization";

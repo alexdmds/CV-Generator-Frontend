@@ -16,7 +16,7 @@ interface ResumeFormContainerProps {
   handleDialogOpenChange: (open: boolean) => void;
   cvName: string;
   setCvName: (name: string) => void;
-  handleCreateNewCV: () => Promise<boolean>;
+  handleCreateNewCV: () => Promise<boolean>;  // This was the issue - keeping as Promise<boolean>
   confirmDialogOpen: boolean;
   setConfirmDialogOpen: (open: boolean) => void;
   confirmGenerateCV: () => void;

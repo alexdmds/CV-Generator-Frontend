@@ -1,4 +1,3 @@
-
 import { useResumeForm } from "@/hooks/useResumeForm";
 import { useEffect, useState } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
@@ -41,7 +40,6 @@ const ResumeForm = () => {
     refreshPdfDisplay
   } = useResumeForm();
 
-  // Fetch CV details including job_sumup if in view mode
   useEffect(() => {
     const fetchCVDetails = async () => {
       if (id && id !== 'new') {
@@ -68,18 +66,15 @@ const ResumeForm = () => {
     fetchCVDetails();
   }, [id, setCvName, setJobDescription]);
 
-  // Récupérer la fiche de poste depuis l'URL si disponible
   useEffect(() => {
     if (jobDescriptionParam && !jobDescription) {
       setJobDescription(decodeURIComponent(jobDescriptionParam));
-      // Si c'est un nouveau CV, on ouvre la boîte de dialogue pour le nommer
       if (!isEditing) {
         handleDialogOpenChange(true);
       }
     }
   }, [jobDescriptionParam, jobDescription, setJobDescription, isEditing, handleDialogOpenChange]);
 
-  // On vérifie l'existence du CV en arrière-plan, sans bloquer l'interface
   useEffect(() => {
     if (cvName && !hasCheckedForExistingCV && !isCheckingInProgress) {
       console.log(`Checking for existing CV on component mount in background: ${cvName}`);

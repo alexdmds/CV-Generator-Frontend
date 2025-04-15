@@ -36,7 +36,7 @@ export const createCVFromProfile = (profile: Profile, jobRaw: string, cvName: st
   const skillsList: Skill[] = parseSkills(profile.skills);
 
   // Create CV data
-  const cvData: CVData = {
+  const cvData: any = {
     educations,
     lang_of_cv: language,
     hobbies: profile.hobbies,
@@ -87,9 +87,14 @@ function parseSkills(skillsString: string): Skill[] {
     return [];
   }
   
-  // For simplicity, we'll just create one category with all skills
+  // Convert the skills string to an array format
+  const skillLines = skillsString.split("\n")
+    .filter(line => line.trim() !== "")
+    .map(line => line.trim());
+  
+  // For simplicity, we'll create one category with all skills as an array
   return [{
     category_name: "Compétences techniques",
-    skills: skillsString
+    skills: skillLines // Now we're returning skills as string[]
   }];
 }

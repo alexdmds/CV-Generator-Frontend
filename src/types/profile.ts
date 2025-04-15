@@ -1,4 +1,3 @@
-
 export interface HeadSection {
   name: string;
   phone: string;
@@ -28,7 +27,7 @@ export interface Language {
 }
 
 export interface Skill {
-  skills: string;
+  skills: string[] | string;
   category_name: string;
 }
 
@@ -41,7 +40,6 @@ export interface Profile {
   languages: string;
 }
 
-// Types pour les CVs générés
 export interface CVEducation {
   title: string;
   description: string;

@@ -11,55 +11,35 @@ interface GenerateCVResponse {
   pdfPath?: string;
 }
 
-// Méthode simplifiée pour obtenir l'URL directe sans passer par Firebase
 export const getDirectPdfUrl = (userId: string, cvIdOrName: string, cvName?: string): string => {
-  // Utiliser l'ID du CV directement pour construire l'URL au format attendu
   const encodedId = encodeURIComponent(cvIdOrName);
   console.log(`Constructing PDF URL for user ${userId}, CV ID: ${encodedId}`);
   return `https://storage.googleapis.com/cv-generator-447314.firebasestorage.app/${userId}/cvs/${encodedId}.pdf`;
 };
 
-/**
- * Vérifie si un CV avec le nom donné existe déjà pour l'utilisateur
- * Version non-bloquante qui renvoie une promesse
- */
 export const checkExistingCV = async (
   user: User,
   cvName: string
 ): Promise<string | null> => {
   try {
-    // Essayer directement l'URL publique
     const directUrl = getDirectPdfUrl(user.uid, cvName);
     console.log("Trying direct public URL:", directUrl);
-    
-    // On ne fait pas de vérification d'existence, on suppose que le fichier existe
-    // et on laisse le navigateur gérer l'affichage d'erreur si nécessaire
     return directUrl;
-    
   } catch (error) {
     console.error("Error checking for existing CV:", error);
     return null;
   }
 };
 
-/**
- * Récupère l'URL d'un PDF dans Firebase Storage
- * Version non-bloquante limitée à une seule tentative rapide
- */
 export const getStoragePdfUrl = async (userId: string, cvIdOrName: string, cvName?: string): Promise<string | null> => {
-  // Renvoyer directement l'URL construite sans vérification
   return getDirectPdfUrl(userId, cvIdOrName, cvName);
 };
 
-/**
- * Génère un CV en appelant l'API de génération de CV
- */
 export const generateCVApi = async (
   user: User,
   cvId: string
 ): Promise<GenerateCVResponse> => {
   try {
-    // Obtenir le token Firebase
     const token = await user.getIdToken(true);
     
     console.log("Making API call to generate CV with ID:", cvId);
@@ -69,7 +49,6 @@ export const generateCVApi = async (
       throw new Error("L'ID du CV est manquant ou invalide");
     }
     
-    // Vérifier que le document existe avant de faire l'appel API
     const cvDocRef = doc(db, "cvs", cvId);
     const cvDoc = await getDoc(cvDocRef);
     
@@ -78,12 +57,9 @@ export const generateCVApi = async (
       throw new Error("Le document CV n'existe pas dans Firestore");
     }
     
-    // Faire l'appel API avec la nouvelle URL et le cv_id
-    const requestBody = JSON.stringify({ cv_id: cvId });
-    console.log("Request body for API call:", requestBody);
-    
-    // Timeout de 90 secondes (1min30)
+    // Create a new AbortController for the request timeout
     const controller = new AbortController();
+    // Set a timeout of 90 seconds (1min30)
     const timeoutId = setTimeout(() => controller.abort(), 90000);
     
     const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-cv", {
@@ -92,12 +68,13 @@ export const generateCVApi = async (
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
       },
-      body: requestBody,
+      body: JSON.stringify({ cv_id: cvId }),
       signal: controller.signal
     });
-    
+
+    // Clear the timeout once the request completes
     clearTimeout(timeoutId);
-    
+
     console.log("API Response status:", response.status);
     console.log("API Response headers:", Object.fromEntries([...response.headers]));
 
@@ -117,7 +94,6 @@ export const generateCVApi = async (
   } catch (error) {
     console.error("Error calling CV generation API:", error);
     
-    // Handle abort error differently
     if (error instanceof DOMException && error.name === "AbortError") {
       return {
         success: false,

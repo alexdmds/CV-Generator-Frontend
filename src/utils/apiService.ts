@@ -1,3 +1,4 @@
+
 import { User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db, storage } from "@/components/auth/firebase-config";
@@ -56,6 +57,11 @@ export const generateCVApi = async (
       throw new Error("Le document CV n'existe pas dans Firestore");
     }
     
+    // Create a new AbortController for the request timeout
+    const controller = new AbortController();
+    // Set a timeout of 90 seconds (1min30)
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    
     const response = await fetch("https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-cv", {
       method: "POST",
       headers: {
@@ -65,6 +71,9 @@ export const generateCVApi = async (
       body: JSON.stringify({ cv_id: cvId }),
       signal: controller.signal
     });
+
+    // Clear the timeout once the request completes
+    clearTimeout(timeoutId);
 
     console.log("API Response status:", response.status);
     console.log("API Response headers:", Object.fromEntries([...response.headers]));

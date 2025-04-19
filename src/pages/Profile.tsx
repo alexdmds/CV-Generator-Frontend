@@ -23,9 +23,9 @@ const Profile = () => {
     refreshTokensRef.current();
   }, []);
 
-  // Ajoutons un effet pour les logs de débogage
+  // Effet pour les logs de débogage et forcer le rafraîchissement
   useEffect(() => {
-    console.log("État de génération:", isGenerating);
+    console.log("État de génération dans Profile:", isGenerating);
   }, [isGenerating]);
 
   return (

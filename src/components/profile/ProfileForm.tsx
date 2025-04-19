@@ -8,7 +8,7 @@ import { TokenCounter } from "./TokenCounter";
 import { useProfileGeneration } from "@/hooks/useProfileGeneration";
 import { GenerateProfileButton } from "./GenerateProfileButton";
 import { GenerateProfileDialog } from "./GenerateProfileDialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileText, Wand, Check, Upload } from "lucide-react";
 import { ProfileGenerationLoader } from "./ProfileGenerationLoader";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,14 @@ export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: Pr
     handleGenerateCV,
     handleTimeout 
   } = useProfileGeneration(refreshTokens);
+
+  // Effet pour synchroniser l'état de génération
+  useEffect(() => {
+    console.log("État de génération dans ProfileForm:", isGenerating);
+    return () => {
+      console.log("Démontage de ProfileForm");
+    };
+  }, [isGenerating]);
 
   const handleGenerateButtonClick = () => {
     setConfirmOpen(true);

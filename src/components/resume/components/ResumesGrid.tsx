@@ -18,6 +18,15 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
   onRenameClick,
   onDeleteClick
 }) => {
+  // Debug the resumes data
+  React.useEffect(() => {
+    if (resumes.length > 0) {
+      console.log("Resumes data:", resumes);
+    } else {
+      console.log("No resumes found in the grid component");
+    }
+  }, [resumes]);
+
   if (resumes.length === 0) {
     return (
       <div 
@@ -32,14 +41,18 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {resumes.map((resume) => {
-        // Vérifier que nous avons un ID et un nom uniques pour chaque CV
-        const resumeId = (resume as any).id;
+      {resumes.map((resume, index) => {
+        // Get the resume ID safely
+        const resumeId = (resume as any).id || '';
+        
+        // Fallback for CV name if it's missing
         const resumeName = resume.cv_name || 'CV sans nom';
-        const displayKey = resumeId || `cv-${Date.now()}-${Math.random()}`;
+        
+        // Use a combination of ID and index for the key to ensure uniqueness
+        const displayKey = resumeId ? `cv-${resumeId}` : `cv-${index}-${Date.now()}`;
         
         if (!resumeId) {
-          console.warn("CV missing ID:", resume);
+          console.warn(`CV missing ID at index ${index}:`, resume);
         }
         
         return (
@@ -49,7 +62,7 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
           >
             <CardContent 
               className="flex items-center gap-4 p-4"
-              onClick={() => onResumeClick(resume)}
+              onClick={() => resumeId ? onResumeClick(resume) : console.warn("Cannot click CV without ID")}
             >
               <FileText className="w-8 h-8 text-gray-500" />
               <div className="flex-grow">
@@ -57,30 +70,39 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
                   {resumeName}
                   {!resumeId && <span className="text-red-500 text-xs ml-2">(ID manquant)</span>}
                 </h3>
+                {resume.creation_date && (
+                  <p className="text-xs text-gray-500">
+                    Créé le: {new Date(resume.creation_date).toLocaleDateString()}
+                  </p>
+                )}
               </div>
               <div className="absolute right-2 top-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRenameClick(resume);
-                  }}
-                  className="h-8 w-8"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteClick(resume);
-                  }}
-                  className="h-8 w-8 text-red-500 hover:text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {resumeId && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRenameClick(resume);
+                      }}
+                      className="h-8 w-8"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteClick(resume);
+                      }}
+                      className="h-8 w-8 text-red-500 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

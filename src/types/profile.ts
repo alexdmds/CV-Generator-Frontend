@@ -125,4 +125,5 @@ export interface CV {
   user_id?: string;
   cv_url?: string;
   id?: string;
+  creation_date?: string | number | Date; // Added creation_date field
 }

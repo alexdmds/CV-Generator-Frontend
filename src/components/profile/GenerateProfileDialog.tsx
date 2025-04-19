@@ -14,12 +14,14 @@ interface GenerateProfileDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  disabled?: boolean;
 }
 
 export const GenerateProfileDialog = ({
   isOpen,
   onOpenChange,
   onConfirm,
+  disabled = false,
 }: GenerateProfileDialogProps) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>

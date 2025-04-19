@@ -8,7 +8,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 
-export const PhotoUpload = () => {
+interface PhotoUploadProps {
+  disabled?: boolean;
+}
+
+export const PhotoUpload = ({ disabled = false }: PhotoUploadProps) => {
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [profilePicUrl, setProfilePicUrl] = useState<string>("");
   const { toast } = useToast();
@@ -105,11 +109,13 @@ export const PhotoUpload = () => {
           onChange={handleFileChange}
           className="hidden"
           id="profile-pic"
+          disabled={disabled}
         />
         <Button
           type="button"
           variant="outline"
           onClick={() => document.getElementById("profile-pic")?.click()}
+          disabled={disabled}
         >
           <Camera className="mr-2" />
           Changer la photo

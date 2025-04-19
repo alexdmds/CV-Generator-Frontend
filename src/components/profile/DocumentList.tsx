@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 
-export const DocumentList = () => {
+interface DocumentListProps {
+  disabled?: boolean;
+}
+
+export const DocumentList = ({ disabled = false }: DocumentListProps) => {
   const [cvFiles, setCvFiles] = useState<{name: string, url: string}[]>([]);
   const { toast } = useToast();
   const auth = getAuth();
@@ -137,12 +142,14 @@ export const DocumentList = () => {
         className="hidden"
         id="cv-upload"
         multiple
+        disabled={disabled}
       />
       <Button
         type="button"
         variant="outline"
         onClick={() => document.getElementById("cv-upload")?.click()}
         className="w-full"
+        disabled={disabled}
       >
         <Upload className="mr-2" />
         Ajouter des documents (PDF)
@@ -164,6 +171,7 @@ export const DocumentList = () => {
                 size="icon"
                 onClick={() => handleDeleteCV(index)}
                 className="hover:text-red-500"
+                disabled={disabled}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

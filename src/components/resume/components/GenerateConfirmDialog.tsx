@@ -29,14 +29,27 @@ export function GenerateConfirmDialog({
   isGenerating = false,
   progress = 0,
 }: GenerateConfirmDialogProps) {
+  const handleCancel = () => {
+    // Si nous sommes en cours de génération, ne pas permettre l'annulation
+    if (isSubmitting) {
+      return;
+    }
+    
+    // Sinon, fermer le dialogue
+    onOpenChange(false);
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={(isOpen) => {
-      // Prevent closing the dialog while submitting
-      if (isSubmitting && !isOpen) {
-        return;
-      }
-      onOpenChange(isOpen);
-    }}>
+    <AlertDialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        // Ne pas permettre la fermeture pendant la soumission
+        if (isSubmitting && !isOpen) {
+          return;
+        }
+        onOpenChange(isOpen);
+      }}
+    >
       <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>
@@ -66,8 +79,12 @@ export function GenerateConfirmDialog({
             </p>
           ) : (
             <>
-              <AlertDialogCancel disabled={isSubmitting}>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={onConfirm} disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
+              <AlertDialogCancel onClick={handleCancel}>Annuler</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={onConfirm} 
+                className="bg-primary hover:bg-primary/90"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

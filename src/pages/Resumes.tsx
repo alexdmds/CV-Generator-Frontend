@@ -22,8 +22,10 @@ const Resumes = () => {
     
     // Fonction pour mettre à jour la progression
     const handleGenerationProgress = (event: CustomEvent) => {
-      setProgress(event.detail.progress || 0);
-      console.log("CV generation progress:", event.detail.progress);
+      if (isGenerating) { // Vérifier que la génération est toujours en cours
+        setProgress(event.detail.progress || 0);
+        console.log("CV generation progress:", event.detail.progress);
+      }
     };
     
     // Fonction pour terminer la génération
@@ -37,18 +39,27 @@ const Resumes = () => {
       }, 1500);
     };
     
+    // Fonction pour gérer les annulations de génération
+    const handleGenerationCancel = () => {
+      setIsGenerating(false);
+      setProgress(0);
+      console.log("CV generation cancelled");
+    };
+    
     // Écouter les événements personnalisés
     window.addEventListener('cv-generation-start', handleGenerationStart as EventListener);
     window.addEventListener('cv-generation-progress', handleGenerationProgress as EventListener);
     window.addEventListener('cv-generation-complete', handleGenerationComplete as EventListener);
+    window.addEventListener('cv-generation-cancel', handleGenerationCancel as EventListener);
     
     // Nettoyage des écouteurs d'événements
     return () => {
       window.removeEventListener('cv-generation-start', handleGenerationStart as EventListener);
       window.removeEventListener('cv-generation-progress', handleGenerationProgress as EventListener);
       window.removeEventListener('cv-generation-complete', handleGenerationComplete as EventListener);
+      window.removeEventListener('cv-generation-cancel', handleGenerationCancel as EventListener);
     };
-  }, []);
+  }, [isGenerating]);
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,88 +1,92 @@
 
-import { useState, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { useNavigate } from "react-router-dom";
-import { db, auth } from "@/components/auth/firebase-config";
+import { useState, useEffect, useCallback } from "react";
+import { auth, db } from "@/components/auth/firebase-config";
+import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { CV } from "@/types/profile";
-import { onAuthStateChanged } from "firebase/auth";
 
 export const useLoadResumes = () => {
   const [resumes, setResumes] = useState<CV[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+
+  const loadResumes = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        console.log("No user logged in");
+        setResumes([]);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("Loading CVs for user:", user.uid);
+      
+      // Modified query to avoid requiring a composite index
+      // Just filter by user_id without the orderBy
+      const q = query(
+        collection(db, "cvs"),
+        where("user_id", "==", user.uid)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      let loadedResumes: CV[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        loadedResumes.push({
+          ...data,
+          id: doc.id,
+        } as CV);
+      });
+
+      // Debug: Afficher les CV chargés
+      console.log("Loaded resumes:", loadedResumes);
+
+      // Sort locally instead of in the query
+      loadedResumes = loadedResumes.sort((a, b) => {
+        // If creation_date exists, use it for sorting
+        if (a.creation_date && b.creation_date) {
+          return new Date(b.creation_date as string).getTime() - new Date(a.creation_date as string).getTime();
+        }
+        // Fallback if creation_date is not available
+        return 0;
+      });
+
+      console.log(`Loaded ${loadedResumes.length} CVs`);
+      setResumes(loadedResumes);
+    } catch (error) {
+      console.error("Error loading resumes:", error);
+      // En cas d'erreur, définir un tableau vide pour éviter que l'interface ne reste bloquée
+      setResumes([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fonction explicite pour rafraîchir la liste de CV
+  const refreshResumes = useCallback(() => {
+    console.log("Refreshing resume list");
+    loadResumes();
+  }, [loadResumes]);
 
   useEffect(() => {
-    const loadResumes = async (user: any) => {
-      try {
-        if (!user) {
-          toast({
-            title: "Erreur d'authentification",
-            description: "Vous devez être connecté pour voir vos CVs",
-            variant: "destructive",
-          });
-          navigate("/login");
-          return;
-        }
-
-        console.log("Loading CVs for user:", user.uid);
-        
-        try {
-          const cvsQuery = query(collection(db, "cvs"), where("user_id", "==", user.uid));
-          const cvsSnapshot = await getDocs(cvsQuery);
-          
-          console.log("CVs snapshot size:", cvsSnapshot.size);
-          
-          if (!cvsSnapshot.empty) {
-            const cvsData = cvsSnapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                id: doc.id,
-                cv_name: data.cv_name,
-                job_raw: data.job_raw,
-                cv_data: data.cv_data
-              } as CV & { id: string };
-            });
-            
-            console.log("CVs found:", cvsData);
-            setResumes(cvsData);
-          } else {
-            console.log("No CVs found for user");
-            setResumes([]);
-          }
-        } catch (error) {
-          console.error("Error loading CVs:", error);
-          toast({
-            title: "Erreur",
-            description: "Impossible de charger vos CVs",
-            variant: "destructive",
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error("Error in loadResumes:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger vos CVs",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-      }
-    };
-
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("Auth state changed. User:", user?.uid);
       if (user) {
-        loadResumes(user);
+        loadResumes();
       } else {
-        navigate("/login");
+        setResumes([]);
+        setIsLoading(false);
       }
     });
 
     return () => unsubscribe();
-  }, [toast, navigate]);
+  }, [loadResumes]);
 
-  return { resumes, setResumes, isLoading };
+  return {
+    resumes,
+    setResumes,
+    isLoading,
+    refreshResumes
+  };
 };

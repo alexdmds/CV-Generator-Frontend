@@ -26,8 +26,6 @@ export function GenerateResumeDialog({
     pendingCvId, 
     pendingCvName, 
     createCVDocument,
-    setPendingCvId,
-    setPendingCvName,
     resetPendingStates
   } = useCVCreation();
   
@@ -36,8 +34,8 @@ export function GenerateResumeDialog({
     handleGenerateResume 
   } = useResumeGeneration();
   
-  // Utiliser useResumes pour accéder à la fonction deleteResume
-  const { deleteResume, refreshResumes } = useResumes();
+  // Utiliser useResumes pour accéder à la fonction refreshResumes
+  const { refreshResumes } = useResumes();
 
   // Handle job description submission
   const handleJobDescriptionSubmit = async (jobDescription: string) => {
@@ -74,41 +72,14 @@ export function GenerateResumeDialog({
   };
 
   // Handle dialog cancellation
-  const handleDialogCancel = async () => {
-    console.log("Dialog cancelled");
+  const handleDialogCancel = () => {
+    console.log("Dialog cancelled, resetting pending states");
     
-    // Si nous avons un CV en attente de génération et que l'utilisateur annule, nous le supprimons
-    if (pendingCvId) {
-      try {
-        console.log(`Suppression du CV annulé avec ID: ${pendingCvId}`);
-        
-        // Utiliser la fonction deleteResume de useResumes au lieu de deleteDoc directement
-        const success = await deleteResume(pendingCvId);
-        
-        if (success) {
-          toast({
-            title: "CV supprimé",
-            description: "Le CV en attente a été supprimé suite à l'annulation",
-          });
-          
-          // Rafraîchir la liste des CV
-          refreshResumes();
-        }
-        
-        // Réinitialiser les états pour éviter des références obsolètes
-        resetPendingStates();
-      } catch (error) {
-        console.error("Erreur lors de la suppression du CV annulé:", error);
-        
-        resetPendingStates(); // Quand même réinitialiser les états même en cas d'erreur
-        
-        toast({
-          variant: "destructive",
-          title: "Erreur",
-          description: "Impossible de supprimer le CV en attente",
-        });
-      }
-    }
+    // Ne pas essayer de supprimer le document, simplement réinitialiser les états
+    resetPendingStates();
+    
+    // Rafraîchir la liste des CV pour s'assurer que l'interface est à jour
+    refreshResumes();
   };
 
   return (

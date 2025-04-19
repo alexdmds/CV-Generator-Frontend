@@ -5,6 +5,8 @@ import { JobDescriptionDialog } from "./JobDescriptionDialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useCVCreation } from "@/hooks/useCVCreation";
 import { useResumeGeneration } from "@/hooks/useResumeGeneration";
+import { deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/components/auth/firebase-config";
 
 interface GenerateResumeDialogProps {
   jobDescriptionDialogOpen: boolean;
@@ -24,7 +26,9 @@ export function GenerateResumeDialog({
     isSubmitting, 
     pendingCvId, 
     pendingCvName, 
-    createCVDocument 
+    createCVDocument,
+    setPendingCvId,
+    setPendingCvName
   } = useCVCreation();
   
   const { 
@@ -67,9 +71,36 @@ export function GenerateResumeDialog({
   };
 
   // Handle dialog cancellation
-  const handleDialogCancel = () => {
-    // Réinitialiser tous les états associés si nécessaire
+  const handleDialogCancel = async () => {
     console.log("Dialog cancelled");
+    
+    // Si nous avons un CV en attente de génération et que l'utilisateur annule, nous le supprimons
+    if (pendingCvId) {
+      try {
+        console.log(`Suppression du CV annulé avec ID: ${pendingCvId}`);
+        
+        // Supprimer le document de Firestore
+        const docRef = doc(db, "cvs", pendingCvId);
+        await deleteDoc(docRef);
+        
+        toast({
+          title: "CV supprimé",
+          description: "Le CV en attente a été supprimé suite à l'annulation",
+        });
+        
+        // Réinitialiser les états pour éviter des références obsolètes
+        setPendingCvId(null);
+        setPendingCvName(null);
+      } catch (error) {
+        console.error("Erreur lors de la suppression du CV annulé:", error);
+        
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "Impossible de supprimer le CV en attente",
+        });
+      }
+    }
   };
 
   return (

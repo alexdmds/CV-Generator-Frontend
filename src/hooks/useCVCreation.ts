@@ -69,6 +69,12 @@ export function useCVCreation() {
     }
   };
 
+  const resetPendingStates = () => {
+    setPendingCvId(null);
+    setPendingCvName(null);
+    setPendingJobDescription("");
+  };
+
   return {
     isSubmitting,
     pendingJobDescription,
@@ -76,6 +82,8 @@ export function useCVCreation() {
     pendingCvName,
     setPendingCvId,
     setPendingCvName,
+    setPendingJobDescription,
+    resetPendingStates,
     createCVDocument
   };
 }

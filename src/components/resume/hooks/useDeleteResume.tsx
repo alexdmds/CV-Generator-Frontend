@@ -46,6 +46,13 @@ export const useDeleteResume = (
       // Mettre à jour l'état local
       setResumes(prev => prev.filter(resume => (resume as any).id !== cvId));
       
+      // Émettre un événement pour indiquer qu'un CV a été supprimé
+      const event = new CustomEvent('cv-deleted', {
+        detail: { cvId },
+        bubbles: true
+      });
+      window.dispatchEvent(event);
+      
       toast({
         title: "CV supprimé",
         description: "Le CV a été supprimé avec succès",

@@ -13,6 +13,7 @@ export const ProfileGenerationLoader = ({ onTimeout }: ProfileGenerationLoaderPr
   const maxDuration = 90; // 90 secondes (1min30)
 
   useEffect(() => {
+    console.log("ProfileGenerationLoader monté");
     const startTime = Date.now();
     
     const interval = setInterval(() => {
@@ -20,15 +21,20 @@ export const ProfileGenerationLoader = ({ onTimeout }: ProfileGenerationLoaderPr
       const newProgress = Math.min((elapsedTime / maxDuration) * 100, 100);
       
       setProgress(newProgress);
+      console.log(`Progression: ${Math.round(newProgress)}%`);
       
       if (elapsedTime >= maxDuration) {
         clearInterval(interval);
+        console.log("Timeout atteint");
         onTimeout();
       }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [onTimeout]);
+    return () => {
+      console.log("ProfileGenerationLoader démonté");
+      clearInterval(interval);
+    };
+  }, [onTimeout, maxDuration]);
 
   return (
     <Card className="w-full max-w-2xl mx-auto animate-pulse">

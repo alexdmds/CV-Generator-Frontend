@@ -37,6 +37,8 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
     
     try {
       const token = await user.getIdToken();
+      console.log("Génération du profil lancée...");
+      
       const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-profile`, {
         method: 'POST',
         headers: {

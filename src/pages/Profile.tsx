@@ -5,7 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { TokenCounter } from "@/components/profile/TokenCounter";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 
@@ -22,6 +22,11 @@ const Profile = () => {
   const handleRefreshTokens = useCallback(() => {
     refreshTokensRef.current();
   }, []);
+
+  // Ajoutons un effet pour les logs de débogage
+  useEffect(() => {
+    console.log("État de génération:", isGenerating);
+  }, [isGenerating]);
 
   return (
     <div className="min-h-screen bg-gray-50">

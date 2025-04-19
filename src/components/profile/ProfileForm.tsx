@@ -31,6 +31,14 @@ export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: Pr
     setConfirmOpen(true);
   };
 
+  const handleConfirmGeneration = async () => {
+    // Mettre à jour l'état isGenerating avant d'appeler handleGenerateCV
+    setIsGenerating(true);
+    await handleGenerateCV();
+    // Note: nous n'avons pas besoin de remettre isGenerating à false ici,
+    // car c'est géré dans le hook useProfileGeneration
+  };
+
   // Si isGenerating est true, nous affichons le loader à la place du formulaire
   if (isGenerating) {
     return <ProfileGenerationLoader onTimeout={handleTimeout} />;
@@ -86,7 +94,7 @@ export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: Pr
           <GenerateProfileDialog 
             isOpen={confirmOpen}
             onOpenChange={setConfirmOpen}
-            onConfirm={handleGenerateCV}
+            onConfirm={handleConfirmGeneration}
             disabled={isGenerating}
           />
           

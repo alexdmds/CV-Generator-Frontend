@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, FileText, RefreshCcw, FileX, ExternalLink } from "lucide-react";
+import { Loader2, FileText, RefreshCcw, FileX, ExternalLink, Download } from "lucide-react";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useCallback, useEffect, useState } from "react";
 import { auth } from "@/components/auth/firebase-config";
@@ -28,9 +27,8 @@ export function CVPreviewPanel({
   refreshPdfDisplay
 }: CVPreviewPanelProps) {
   const [loadError, setLoadError] = useState(false);
-  const [iframeKey, setIframeKey] = useState(Date.now()); // Force iframe rerender when needed
-  
-  // Function to force PDF refresh
+  const [iframeKey, setIframeKey] = useState(Date.now());
+
   const handleRefreshPdf = useCallback(() => {
     const user = auth.currentUser;
     if (!user) {
@@ -48,12 +46,10 @@ export function CVPreviewPanel({
       console.error("Neither cvId nor cvName provided for refresh");
     }
     
-    // Force iframe rerender
     setIframeKey(Date.now());
     setLoadError(false);
   }, [cvId, cvName, refreshPdfDisplay]);
 
-  // Function to handle retry
   const handleRetry = useCallback(() => {
     console.log("Retrying CV existence check for:", cvName);
     retryCheckForExistingCV(cvName);
@@ -61,7 +57,17 @@ export function CVPreviewPanel({
     setIframeKey(Date.now());
   }, [retryCheckForExistingCV, cvName]);
 
-  // Auto-refresh when component mounts or when route changes (if we have a cvId)
+  const handleDownload = () => {
+    if (pdfUrl) {
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = `${cvName || 'cv'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   useEffect(() => {
     if (cvId && !isGenerating && !isChecking) {
       const user = auth.currentUser;
@@ -73,7 +79,6 @@ export function CVPreviewPanel({
     }
   }, [cvId, isGenerating, isChecking, refreshPdfDisplay, cvName]);
 
-  // Handle PDF load error
   const handlePdfLoadError = useCallback(() => {
     console.error("Failed to load PDF, setting loadError to true");
     setLoadError(true);
@@ -116,7 +121,7 @@ export function CVPreviewPanel({
               src={pdfUrl}
               className="w-full h-[650px] border-0"
               title="CV généré"
-              key={iframeKey} // Force iframe reset when URL changes
+              key={iframeKey}
               onError={handlePdfLoadError}
             />
             <div className="flex justify-center space-x-4 py-4 bg-gray-50 border-t">
@@ -127,6 +132,13 @@ export function CVPreviewPanel({
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Ouvrir en plein écran
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleDownload}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Télécharger
               </Button>
               <Button 
                 variant="outline" 

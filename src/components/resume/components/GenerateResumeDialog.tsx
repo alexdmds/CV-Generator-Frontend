@@ -34,32 +34,62 @@ export function GenerateResumeDialog({
 
   // Handle job description submission
   const handleJobDescriptionSubmit = async (jobDescription: string) => {
-    const result = await createCVDocument(jobDescription);
-    
-    if (result.success) {
-      setJobDescriptionDialogOpen(false);
-      setConfirmDialogOpen(true);
+    try {
+      const result = await createCVDocument(jobDescription);
+      
+      if (result.success) {
+        setJobDescriptionDialogOpen(false);
+        setConfirmDialogOpen(true);
+      }
+    } catch (error) {
+      console.error("Error creating CV document:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la création du document CV",
+        variant: "destructive",
+      });
     }
   };
 
   // Handle confirmation to generate CV
   const handleConfirmGenerate = async () => {
     setConfirmDialogOpen(false);
-    await handleGenerateResume(pendingCvId, pendingCvName);
+    try {
+      await handleGenerateResume(pendingCvId, pendingCvName);
+    } catch (error) {
+      console.error("Error generating resume:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la génération du CV",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle dialog cancellation
+  const handleDialogCancel = () => {
+    // Réinitialiser tous les états associés si nécessaire
+    console.log("Dialog cancelled");
   };
 
   return (
     <>
       <JobDescriptionDialog 
         open={jobDescriptionDialogOpen}
-        onOpenChange={setJobDescriptionDialogOpen}
+        onOpenChange={(open) => {
+          setJobDescriptionDialogOpen(open);
+          if (!open) handleDialogCancel();
+        }}
         onConfirm={handleJobDescriptionSubmit}
         isSubmitting={isSubmitting}
       />
 
       <GenerateConfirmDialog 
         open={confirmDialogOpen}
-        onOpenChange={setConfirmDialogOpen}
+        onOpenChange={(open) => {
+          setConfirmDialogOpen(open);
+          if (!open) handleDialogCancel();
+        }}
         onConfirm={handleConfirmGenerate}
         isSubmitting={isSubmitting || isGenerating}
         isGenerating={isGenerating}

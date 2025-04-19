@@ -24,9 +24,18 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
     { progress: 95, message: "Publication du CV..." },
   ];
 
+  // Fonction pour émettre l'événement d'annulation de génération
+  const emitCancelEvent = () => {
+    const event = new CustomEvent('cv-generation-cancel', { 
+      bubbles: true 
+    });
+    window.dispatchEvent(event);
+  };
+
   // Fonction pour simuler une progression cohérente
   const simulateProgressSteps = (cvId: string, cvName: string | undefined) => {
     let currentStep = 0;
+    let intervalId: NodeJS.Timeout | null = null;
     
     // Émettre l'événement initial
     emitGenerationEvent('cv-generation-start', { 
@@ -39,10 +48,18 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
     
     // Fonction pour passer à l'étape suivante
     const moveToNextStep = () => {
+      if (!isGenerating) {
+        if (intervalId) clearTimeout(intervalId);
+        return;
+      }
+      
       currentStep++;
       
       // Si on a atteint la fin des étapes, on s'arrête
-      if (currentStep >= generationSteps.length) return;
+      if (currentStep >= generationSteps.length) {
+        if (intervalId) clearTimeout(intervalId);
+        return;
+      }
       
       // Sinon, on émet l'événement pour l'étape suivante
       const currentProgress = generationSteps[currentStep].progress;
@@ -57,11 +74,17 @@ export function useCVGenerationProcess(refreshPdfDisplay: (userId: string, cvNam
       
       // Prévoir l'étape suivante après un délai aléatoire
       const nextStepDelay = 3000 + Math.random() * 5000; // Entre 3 et 8 secondes
-      setTimeout(moveToNextStep, nextStepDelay);
+      intervalId = setTimeout(moveToNextStep, nextStepDelay);
     };
     
     // Commencer la progression après un court délai
-    setTimeout(moveToNextStep, 2000);
+    intervalId = setTimeout(moveToNextStep, 2000);
+    
+    // Retourner une fonction pour annuler la simulation
+    return () => {
+      if (intervalId) clearTimeout(intervalId);
+      emitCancelEvent();
+    };
   };
 
   // Fonction pour émettre des événements de progression

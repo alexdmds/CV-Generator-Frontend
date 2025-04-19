@@ -33,6 +33,7 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
     }
 
     try {
+      setConfirmOpen(false); // Fermer la boîte de dialogue de confirmation
       const token = await user.getIdToken();
       console.log("Génération du profil lancée...");
       

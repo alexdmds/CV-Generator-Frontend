@@ -34,11 +34,10 @@ export const GenerateProfileDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={disabled}>Annuler</AlertDialogCancel>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
             className="bg-primary hover:bg-primary/90"
-            disabled={disabled}
           >
             Continuer
           </AlertDialogAction>

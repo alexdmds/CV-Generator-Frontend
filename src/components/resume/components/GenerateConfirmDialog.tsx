@@ -31,10 +31,7 @@ export function GenerateConfirmDialog({
 }: GenerateConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={(isOpen) => {
-      // Prevent closing the dialog while submitting
-      if (isSubmitting && !isOpen) {
-        return;
-      }
+      // Ne pas bloquer la fermeture par Annuler, même pendant l'envoi
       onOpenChange(isOpen);
     }}>
       <AlertDialogContent className="sm:max-w-md">
@@ -66,8 +63,8 @@ export function GenerateConfirmDialog({
             </p>
           ) : (
             <>
-              <AlertDialogCancel disabled={isSubmitting}>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={onConfirm} disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={onConfirm} className="bg-primary hover:bg-primary/90">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

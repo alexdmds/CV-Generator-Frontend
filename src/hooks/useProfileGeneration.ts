@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +10,15 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
   const { toast } = useToast();
   const auth = getAuth();
   const navigate = useNavigate();
+
+  const handleTimeout = () => {
+    setIsGenerating(false);
+    toast({
+      variant: "destructive",
+      title: "Délai dépassé",
+      description: "La génération a pris trop de temps. Veuillez réessayer.",
+    });
+  };
 
   const handleGenerateCV = async () => {
     const user = auth.currentUser;
@@ -26,16 +35,7 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
     setIsGenerating(true);
     setConfirmOpen(false);
     
-    toast({
-      title: "Génération du profil",
-      description: "La génération de votre profil a commencé. Cela peut prendre jusqu'à 1 minute 30...",
-    });
-
     try {
-      // Créer un AbortController pour gérer le timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 secondes (1min30)
-
       const token = await user.getIdToken();
       const response = await fetch(`https://cv-generator-api-prod-177360827241.europe-west1.run.app/api/v2/generate-profile`, {
         method: 'POST',
@@ -43,11 +43,7 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        signal: controller.signal
       });
-
-      // Effacer le timeout une fois la requête terminée
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.text();
@@ -63,26 +59,16 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
         description: "Votre profil a été généré avec succès !",
       });
       
-      // Rafraîchir le compteur de tokens après une génération réussie
       refreshTokens();
       
     } catch (error) {
       console.error("Erreur lors de la génération du profil:", error);
       
-      // Message spécifique pour le timeout
-      if (error instanceof DOMException && error.name === "AbortError") {
-        toast({
-          variant: "destructive",
-          title: "Délai d'attente dépassé",
-          description: "La requête a pris trop de temps. Veuillez réessayer ultérieurement.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Échec de la génération",
-          description: "Une erreur est survenue lors de la génération de votre profil. Veuillez réessayer.",
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Échec de la génération",
+        description: "Une erreur est survenue lors de la génération de votre profil. Veuillez réessayer.",
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -92,6 +78,7 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
     isGenerating,
     confirmOpen,
     setConfirmOpen,
-    handleGenerateCV
+    handleGenerateCV,
+    handleTimeout
   };
 };

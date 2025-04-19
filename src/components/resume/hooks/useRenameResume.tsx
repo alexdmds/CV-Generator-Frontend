@@ -1,7 +1,7 @@
 
 import { useToast } from "@/components/ui/use-toast";
 import { auth, db } from "@/components/auth/firebase-config";
-import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { CV } from "@/types/profile";
 
 export const useRenameResume = (
@@ -10,9 +10,7 @@ export const useRenameResume = (
 ) => {
   const { toast } = useToast();
 
-  const renameResume = async (oldName: string, newName: string) => {
-    if (!newName) return;
-    
+  const renameResume = async (cvId: string, newName: string): Promise<boolean> => {
     const user = auth.currentUser;
     if (!user) {
       toast({
@@ -20,56 +18,63 @@ export const useRenameResume = (
         description: "Vous devez être connecté pour renommer un CV",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     try {
-      // Trouver le CV dans la collection "cvs"
-      const cvsQuery = query(
-        collection(db, "cvs"), 
-        where("user_id", "==", user.uid),
-        where("cv_name", "==", oldName)
-      );
+      console.log("Attempting to rename CV with ID:", cvId);
       
-      const querySnapshot = await getDocs(cvsQuery);
-      
-      if (!querySnapshot.empty) {
-        // Récupérer les données du CV
-        const cvData = querySnapshot.docs[0].data();
-        
-        // Mettre à jour le nom du CV
-        cvData.cv_name = newName;
-        
-        // Mise à jour du document
-        await updateDoc(querySnapshot.docs[0].ref, cvData);
-        
-        // Mettre à jour l'état local
-        setResumes(prev => prev.map(cv => {
-          if (cv.cv_name === oldName) {
-            return { ...cv, cv_name: newName };
-          }
-          return cv;
-        }));
-        
-        toast({
-          title: "CV renommé",
-          description: "Le CV a été renommé avec succès",
-        });
-      } else {
-        console.error("CV not found for renaming:", oldName);
+      if (!cvId || cvId.trim() === "") {
+        console.error("Invalid CV ID for renaming:", cvId);
         toast({
           title: "Erreur",
-          description: "CV introuvable",
+          description: "ID de CV invalide pour le renommage",
           variant: "destructive",
         });
+        return false;
       }
+      
+      // Utiliser directement l'ID du document pour mettre à jour le nom
+      const docRef = doc(db, "cvs", cvId);
+      console.log("Updating document with ref:", docRef.path);
+      
+      await updateDoc(docRef, {
+        cv_name: newName
+      });
+      
+      console.log("Document successfully renamed");
+      
+      // Mettre à jour l'état local
+      setResumes(prev => prev.map(resume => {
+        if ((resume as any).id === cvId) {
+          return {
+            ...resume,
+            cv_name: newName
+          };
+        }
+        return resume;
+      }));
+      
+      toast({
+        title: "CV renommé",
+        description: "Le CV a été renommé avec succès",
+      });
+      
+      return true;
     } catch (error) {
       console.error("Error renaming CV:", error);
+      
+      const errorMessage = error instanceof Error 
+        ? `${error.name}: ${error.message}` 
+        : "Erreur inconnue";
+      
       toast({
-        title: "Erreur",
-        description: "Impossible de renommer le CV",
+        title: "Erreur de renommage",
+        description: `Impossible de renommer le CV. ${errorMessage}`,
         variant: "destructive",
       });
+      
+      return false;
     }
   };
 

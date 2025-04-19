@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/components/auth/firebase-config";
@@ -18,7 +17,7 @@ export const ResumeList = () => {
   const navigate = useNavigate();
   const { resumes, isLoading, deleteResume, renameResume } = useResumes();
   
-  // Use the ResumeActions component
+  // Use the ResumeActions component with the updated type definitions
   const resumeActions = ResumeActions({ 
     deleteResume, 
     renameResume 

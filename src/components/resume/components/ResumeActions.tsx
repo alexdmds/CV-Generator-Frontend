@@ -2,81 +2,80 @@
 import { useState } from "react";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { RenameDialog } from "./RenameDialog";
-import { CV } from "@/types/profile";
 
-interface ResumeActionsProps {
-  deleteResume: (id: string) => Promise<void>;
-  renameResume: (id: string, newName: string) => Promise<void>;
-}
+type ResumeActionsProps = {
+  deleteResume: (cvId: string) => Promise<boolean>;
+  renameResume: (cvId: string, newName: string) => Promise<boolean>;
+};
 
-export function ResumeActions({ deleteResume, renameResume }: ResumeActionsProps) {
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+export const ResumeActions = ({ deleteResume, renameResume }: ResumeActionsProps) => {
   const [cvToDelete, setCvToDelete] = useState<string | null>(null);
-  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [cvToRename, setCvToRename] = useState<string | null>(null);
   const [newCvName, setNewCvName] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
 
-  const handleDeleteCV = async () => {
+  // Handle delete confirmation
+  const handleConfirmDelete = async () => {
     if (cvToDelete) {
-      console.log("Executing deletion for CV with ID:", cvToDelete);
-      try {
-        await deleteResume(cvToDelete);
-        console.log("Delete operation completed for CV ID:", cvToDelete);
-      } catch (error) {
-        console.error("Error in handleDeleteCV:", error);
+      console.log("Confirming deletion of CV with ID:", cvToDelete);
+      const success = await deleteResume(cvToDelete);
+      
+      // Only close the dialog if deletion was successful
+      if (success) {
+        setDeleteConfirmOpen(false);
+        setCvToDelete(null);
       }
-    } else {
-      console.error("No CV ID to delete");
     }
-    setDeleteConfirmOpen(false);
-    setCvToDelete(null);
   };
 
-  const handleRenameCV = async () => {
-    if (cvToRename && newCvName) {
-      await renameResume(cvToRename, newCvName);
+  // Handle rename confirmation
+  const handleConfirmRename = async () => {
+    if (cvToRename && newCvName.trim()) {
+      console.log("Confirming rename of CV with ID:", cvToRename);
+      const success = await renameResume(cvToRename, newCvName.trim());
+      
+      // Only close the dialog if rename was successful
+      if (success) {
+        setRenameDialogOpen(false);
+        setCvToRename(null);
+        setNewCvName("");
+      }
     }
-    setRenameDialogOpen(false);
-    setCvToRename(null);
-    setNewCvName("");
   };
+
+  // Dialogs JSX
+  const dialogs = (
+    <>
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleConfirmDelete}
+      />
+      
+      <RenameDialog
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        value={newCvName}
+        onChange={setNewCvName}
+        onConfirm={handleConfirmRename}
+      />
+    </>
+  );
 
   return {
-    // Dialog states
+    cvToDelete,
+    setCvToDelete,
+    cvToRename,
+    setCvToRename,
+    newCvName,
+    setNewCvName,
     deleteConfirmOpen,
     setDeleteConfirmOpen,
     renameDialogOpen,
     setRenameDialogOpen,
-    
-    // Action states
-    cvToDelete,
-    setCvToDelete,
-    cvToRename, 
-    setCvToRename,
-    newCvName,
-    setNewCvName,
-    
-    // Action handlers
-    handleDeleteCV,
-    handleRenameCV,
-    
-    // Dialog components
-    dialogs: (
-      <>
-        <DeleteConfirmDialog 
-          open={deleteConfirmOpen}
-          onOpenChange={setDeleteConfirmOpen}
-          onConfirm={handleDeleteCV}
-        />
-
-        <RenameDialog 
-          open={renameDialogOpen}
-          onOpenChange={setRenameDialogOpen}
-          newName={newCvName}
-          onNewNameChange={setNewCvName}
-          onConfirm={handleRenameCV}
-        />
-      </>
-    )
+    handleConfirmDelete,
+    handleConfirmRename,
+    dialogs
   };
-}
+};

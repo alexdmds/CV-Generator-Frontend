@@ -14,12 +14,14 @@ interface GenerateProfileDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  disabled?: boolean;
 }
 
 export const GenerateProfileDialog = ({
   isOpen,
   onOpenChange,
   onConfirm,
+  disabled = false,
 }: GenerateProfileDialogProps) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
@@ -32,10 +34,11 @@ export const GenerateProfileDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogCancel disabled={disabled}>Annuler</AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
             className="bg-primary hover:bg-primary/90"
+            disabled={disabled}
           >
             Continuer
           </AlertDialogAction>

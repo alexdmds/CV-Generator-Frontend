@@ -1,6 +1,8 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, FileText, RefreshCcw, FileX, ExternalLink, Download } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Loader2, FileText, RefreshCcw, FileX, ExternalLink, Download, AlertTriangle } from "lucide-react";
 import { ProfileGeneratingIndicator } from "@/components/profile/ProfileGeneratingIndicator";
 import { useCallback, useEffect, useState } from "react";
 import { auth } from "@/components/auth/firebase-config";
@@ -115,52 +117,74 @@ export function CVPreviewPanel({
               message="Génération du CV en cours..."
             />
           </div>
-        ) : pdfUrl && !loadError ? (
-          <div className="overflow-hidden rounded-b-md">
-            <iframe 
-              src={pdfUrl}
-              className="w-full h-[650px] border-0"
-              title="CV généré"
-              key={iframeKey}
-              onError={handlePdfLoadError}
-            />
-            <div className="flex justify-center space-x-4 py-4 bg-gray-50 border-t">
-              <Button 
-                variant="default" 
-                onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Ouvrir en plein écran
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleDownload}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Télécharger
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleRefreshPdf}
-              >
-                <RefreshCcw className="w-4 h-4 mr-2" />
-                Actualiser
-              </Button>
-            </div>
+        ) : pdfUrl ? (
+          <div>
+            {loadError ? (
+              <div className="p-6">
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Erreur de prévisualisation</AlertTitle>
+                  <AlertDescription>
+                    Impossible de charger la prévisualisation du CV. 
+                    Vous pouvez toujours télécharger le fichier directement.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex justify-center">
+                  <Button 
+                    variant="default" 
+                    onClick={handleDownload}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger le CV
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <iframe 
+                  src={pdfUrl}
+                  className="w-full h-[650px] border-0"
+                  title="CV généré"
+                  key={iframeKey}
+                  onError={handlePdfLoadError}
+                />
+                <div className="flex justify-center space-x-4 py-4 bg-gray-50 border-t">
+                  <Button 
+                    variant="default" 
+                    onClick={() => window.open(pdfUrl, '_blank', 'noopener,noreferrer')}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Ouvrir en plein écran
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDownload}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRefreshPdf}
+                  >
+                    <RefreshCcw className="w-4 h-4 mr-2" />
+                    Actualiser
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="p-6 text-center">
             <div className="mb-4 flex flex-col items-center justify-center">
               <FileX className="w-16 h-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900">
-                {loadError ? "Erreur de chargement du PDF" : "CV pas encore généré"}
+                CV pas encore généré
               </h3>
               <p className="text-gray-500 mt-2">
-                {loadError 
-                  ? "Impossible de charger le PDF. Le fichier est peut-être inaccessible ou n'existe pas."
-                  : "Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible."
-                }
+                Aucun CV n'a encore été généré avec ce nom ou le fichier n'est pas accessible.
               </p>
               <Button 
                 variant="outline" 
@@ -169,7 +193,7 @@ export function CVPreviewPanel({
                 size="sm"
               >
                 <RefreshCcw className="w-4 h-4 mr-2" />
-                {loadError ? "Essayer à nouveau" : "Vérifier à nouveau"}
+                Vérifier à nouveau
               </Button>
             </div>
           </div>
@@ -178,3 +202,4 @@ export function CVPreviewPanel({
     </Card>
   );
 }
+

@@ -14,16 +14,16 @@ import { Label } from "@/components/ui/label";
 interface RenameDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  newName: string;
-  onNewNameChange: (name: string) => void;
+  value: string;  // Updated property name to match what's being passed
+  onChange: (name: string) => void;  // Updated property name to match what's being passed
   onConfirm: () => void;
 }
 
 export const RenameDialog: React.FC<RenameDialogProps> = ({
   open,
   onOpenChange,
-  newName,
-  onNewNameChange,
+  value,  // Updated from newName
+  onChange,  // Updated from onNewNameChange
   onConfirm
 }) => {
   return (
@@ -36,8 +36,8 @@ export const RenameDialog: React.FC<RenameDialogProps> = ({
           <Label htmlFor="newName">Nouveau nom</Label>
           <Input
             id="newName"
-            value={newName}
-            onChange={(e) => onNewNameChange(e.target.value)}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
             placeholder="Entrez le nouveau nom"
           />
         </div>

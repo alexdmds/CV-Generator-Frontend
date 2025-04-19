@@ -18,7 +18,7 @@ export const useDeleteResume = (
         description: "Vous devez être connecté pour supprimer un CV",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     try {
@@ -31,7 +31,7 @@ export const useDeleteResume = (
           description: "ID de CV invalide pour la suppression",
           variant: "destructive",
         });
-        return;
+        return false;
       }
       
       // Utiliser directement l'ID du document pour le supprimer
@@ -57,6 +57,8 @@ export const useDeleteResume = (
         title: "CV supprimé",
         description: "Le CV a été supprimé avec succès",
       });
+      
+      return true;
     } catch (error) {
       console.error("Error deleting CV:", error);
       
@@ -67,9 +69,11 @@ export const useDeleteResume = (
       
       toast({
         title: "Erreur de suppression",
-        description: `Impossible de supprimer le CV. ${errorMessage}`,
+        description: `Impossible de supprimer le CV en attente. ${errorMessage}`,
         variant: "destructive",
       });
+      
+      return false;
     }
   };
 

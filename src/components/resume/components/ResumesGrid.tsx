@@ -18,16 +18,16 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
   onRenameClick,
   onDeleteClick
 }) => {
-  // Debug the resumes data
+  // Debug les données de CV
   React.useEffect(() => {
     if (resumes.length > 0) {
-      console.log("Resumes data:", resumes);
+      console.log("Resumes data in grid:", resumes);
     } else {
       console.log("No resumes found in the grid component");
     }
   }, [resumes]);
 
-  if (resumes.length === 0) {
+  if (!resumes || resumes.length === 0) {
     return (
       <div 
         className="text-center py-8 text-gray-500 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors"
@@ -42,13 +42,13 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {resumes.map((resume, index) => {
-        // Get the resume ID safely
+        // Obtenir l'ID du CV de manière sécurisée
         const resumeId = (resume as any).id || '';
         
-        // Fallback for CV name if it's missing
+        // Fallback pour le nom du CV s'il est manquant
         const resumeName = resume.cv_name || 'CV sans nom';
         
-        // Use a combination of ID and index for the key to ensure uniqueness
+        // Utiliser une combinaison d'ID et d'index pour la clé afin d'assurer l'unicité
         const displayKey = resumeId ? `cv-${resumeId}` : `cv-${index}-${Date.now()}`;
         
         if (!resumeId) {
@@ -72,7 +72,7 @@ export const ResumesGrid: React.FC<ResumesGridProps> = ({
                 </h3>
                 {resume.creation_date && (
                   <p className="text-xs text-gray-500">
-                    Créé le: {new Date(resume.creation_date).toLocaleDateString()}
+                    Créé le: {new Date(resume.creation_date as string).toLocaleDateString()}
                   </p>
                 )}
               </div>

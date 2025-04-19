@@ -5,8 +5,7 @@ import { JobDescriptionDialog } from "./JobDescriptionDialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useCVCreation } from "@/hooks/useCVCreation";
 import { useResumeGeneration } from "@/hooks/useResumeGeneration";
-import { deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/components/auth/firebase-config";
+import { useResumes } from "../hooks/useResumes";
 
 interface GenerateResumeDialogProps {
   jobDescriptionDialogOpen: boolean;
@@ -28,13 +27,17 @@ export function GenerateResumeDialog({
     pendingCvName, 
     createCVDocument,
     setPendingCvId,
-    setPendingCvName
+    setPendingCvName,
+    resetPendingStates
   } = useCVCreation();
   
   const { 
     isSubmitting: isGenerating, 
     handleGenerateResume 
   } = useResumeGeneration();
+  
+  // Utiliser useResumes pour accéder à la fonction deleteResume
+  const { deleteResume, refreshResumes } = useResumes();
 
   // Handle job description submission
   const handleJobDescriptionSubmit = async (jobDescription: string) => {
@@ -79,20 +82,25 @@ export function GenerateResumeDialog({
       try {
         console.log(`Suppression du CV annulé avec ID: ${pendingCvId}`);
         
-        // Supprimer le document de Firestore
-        const docRef = doc(db, "cvs", pendingCvId);
-        await deleteDoc(docRef);
+        // Utiliser la fonction deleteResume de useResumes au lieu de deleteDoc directement
+        const success = await deleteResume(pendingCvId);
         
-        toast({
-          title: "CV supprimé",
-          description: "Le CV en attente a été supprimé suite à l'annulation",
-        });
+        if (success) {
+          toast({
+            title: "CV supprimé",
+            description: "Le CV en attente a été supprimé suite à l'annulation",
+          });
+          
+          // Rafraîchir la liste des CV
+          refreshResumes();
+        }
         
         // Réinitialiser les états pour éviter des références obsolètes
-        setPendingCvId(null);
-        setPendingCvName(null);
+        resetPendingStates();
       } catch (error) {
         console.error("Erreur lors de la suppression du CV annulé:", error);
+        
+        resetPendingStates(); // Quand même réinitialiser les états même en cas d'erreur
         
         toast({
           variant: "destructive",

@@ -16,6 +16,7 @@ export const useLoadResumes = () => {
       if (!user) {
         console.log("No user logged in");
         setResumes([]);
+        setIsLoading(false);
         return;
       }
 
@@ -39,11 +40,14 @@ export const useLoadResumes = () => {
         } as CV);
       });
 
+      // Debug: Afficher les CV chargés
+      console.log("Loaded resumes:", loadedResumes);
+
       // Sort locally instead of in the query
       loadedResumes = loadedResumes.sort((a, b) => {
         // If creation_date exists, use it for sorting
         if (a.creation_date && b.creation_date) {
-          return new Date(b.creation_date).getTime() - new Date(a.creation_date).getTime();
+          return new Date(b.creation_date as string).getTime() - new Date(a.creation_date as string).getTime();
         }
         // Fallback if creation_date is not available
         return 0;
@@ -53,6 +57,8 @@ export const useLoadResumes = () => {
       setResumes(loadedResumes);
     } catch (error) {
       console.error("Error loading resumes:", error);
+      // En cas d'erreur, définir un tableau vide pour éviter que l'interface ne reste bloquée
+      setResumes([]);
     } finally {
       setIsLoading(false);
     }

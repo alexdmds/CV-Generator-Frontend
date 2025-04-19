@@ -69,6 +69,7 @@ export function useCVCreation() {
     }
   };
 
+  // Fonction complète pour réinitialiser tous les états à leur valeur par défaut
   const resetPendingStates = () => {
     setPendingCvId(null);
     setPendingCvName(null);

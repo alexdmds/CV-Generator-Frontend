@@ -35,11 +35,7 @@ const Profile = () => {
           setIsGenerating={setIsGenerating}
           refreshTokens={handleRefreshTokens}
         />
-        {isGenerating ? (
-          <ProfileGeneratingIndicator />
-        ) : (
-          <ProfileView />
-        )}
+        {!isGenerating && <ProfileView />}
         <div className="mt-8 flex justify-center">
           <Button
             onClick={() => navigate("/resumes")}

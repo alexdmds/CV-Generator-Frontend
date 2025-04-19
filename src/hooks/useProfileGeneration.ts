@@ -76,6 +76,7 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
 
   return {
     isGenerating,
+    setIsGenerating,
     confirmOpen,
     setConfirmOpen,
     handleGenerateCV,

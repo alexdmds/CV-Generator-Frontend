@@ -2,6 +2,7 @@
 import { Progress } from "@/components/ui/progress";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ProfileGenerationLoaderProps {
   onTimeout: () => void;
@@ -30,26 +31,28 @@ export const ProfileGenerationLoader = ({ onTimeout }: ProfileGenerationLoaderPr
   }, [onTimeout]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-background p-8 rounded-lg shadow-lg w-full max-w-md mx-4">
-        <div className="text-center space-y-6">
-          <div className="flex justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Génération de votre profil</h3>
-            <p className="text-sm text-muted-foreground">
-              Cette opération peut prendre jusqu'à 1 minute 30. Merci de patienter...
+    <Card className="w-full max-w-2xl mx-auto animate-pulse">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold flex items-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+          Génération du profil en cours...
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Nous analysons vos documents et générons votre profil. Cette opération peut prendre jusqu'à 1 minute 30.
             </p>
-          </div>
-          <div className="space-y-2">
-            <Progress value={progress} className="h-2" />
-            <p className="text-sm text-muted-foreground">
-              {Math.round(progress)}%
-            </p>
+            <div className="space-y-2">
+              <Progress value={progress} className="h-2 w-full" />
+              <p className="text-sm text-center text-muted-foreground">
+                {Math.round(progress)}%
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

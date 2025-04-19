@@ -26,6 +26,20 @@ const Profile = () => {
   // Effet pour les logs de débogage et forcer le rafraîchissement
   useEffect(() => {
     console.log("État de génération dans Profile:", isGenerating);
+    
+    // Forcer la réinitialisation après 2 minutes maximum (en cas de problème)
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (isGenerating) {
+      timeoutId = setTimeout(() => {
+        console.log("Timeout de sécurité atteint, force l'état isGenerating à false");
+        setIsGenerating(false);
+      }, 120000); // 2 minutes
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [isGenerating]);
 
   return (

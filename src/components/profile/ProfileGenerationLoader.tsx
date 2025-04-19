@@ -31,7 +31,7 @@ export const ProfileGenerationLoader = ({ onTimeout }: ProfileGenerationLoaderPr
     }, 1000);
 
     return () => {
-      console.log("ProfileGenerationLoader démonté");
+      console.log("ProfileGenerationLoader démonté, intervalle nettoyé");
       clearInterval(interval);
     };
   }, [onTimeout, maxDuration]);

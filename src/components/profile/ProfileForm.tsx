@@ -8,7 +8,7 @@ import { TokenCounter } from "./TokenCounter";
 import { useProfileGeneration } from "@/hooks/useProfileGeneration";
 import { GenerateProfileButton } from "./GenerateProfileButton";
 import { GenerateProfileDialog } from "./GenerateProfileDialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FileText, Wand, Check, Upload } from "lucide-react";
 import { ProfileGenerationLoader } from "./ProfileGenerationLoader";
 import { cn } from "@/lib/utils";
@@ -24,16 +24,20 @@ export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: Pr
     confirmOpen, 
     setConfirmOpen, 
     handleGenerateCV,
-    handleTimeout 
+    handleTimeout,
+    setIsGenerating: setIsGeneratingInHook 
   } = useProfileGeneration(refreshTokens);
 
-  // Effet pour synchroniser l'état de génération
+  // Synchroniser les états entre le hook et le composant parent
   useEffect(() => {
     console.log("État de génération dans ProfileForm:", isGenerating);
+    // Synchroniser l'état du hook avec l'état du parent
+    setIsGeneratingInHook(isGenerating);
+    
     return () => {
       console.log("Démontage de ProfileForm");
     };
-  }, [isGenerating]);
+  }, [isGenerating, setIsGeneratingInHook]);
 
   const handleGenerateButtonClick = () => {
     setConfirmOpen(true);
@@ -42,14 +46,24 @@ export const ProfileForm = ({ isGenerating, setIsGenerating, refreshTokens }: Pr
   const handleConfirmGeneration = async () => {
     // Mettre à jour l'état isGenerating avant d'appeler handleGenerateCV
     setIsGenerating(true);
-    await handleGenerateCV();
-    // Note: nous n'avons pas besoin de remettre isGenerating à false ici,
-    // car c'est géré dans le hook useProfileGeneration
+    
+    try {
+      await handleGenerateCV();
+    } finally {
+      // Force l'état du parent à false aussi, pour s'assurer que les deux sont synchronisés
+      setTimeout(() => {
+        console.log("Force l'état isGenerating à false dans ProfileForm");
+        setIsGenerating(false);
+      }, 500);
+    }
   };
 
   // Si isGenerating est true, nous affichons le loader à la place du formulaire
   if (isGenerating) {
-    return <ProfileGenerationLoader onTimeout={handleTimeout} />;
+    return <ProfileGenerationLoader onTimeout={() => {
+      handleTimeout();
+      setIsGenerating(false);
+    }} />;
   }
 
   return (

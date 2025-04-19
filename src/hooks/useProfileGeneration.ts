@@ -32,9 +32,6 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
       return;
     }
 
-    setIsGenerating(true);
-    setConfirmOpen(false);
-    
     try {
       const token = await user.getIdToken();
       console.log("Génération du profil lancée...");
@@ -72,7 +69,7 @@ export const useProfileGeneration = (refreshTokens: () => void) => {
         description: "Une erreur est survenue lors de la génération de votre profil. Veuillez réessayer.",
       });
     } finally {
-      // Assurer que isGenerating est réinitialisé à false quoi qu'il arrive
+      // Assurons-nous que isGenerating est toujours réinitialisé à false
       console.log("Fin de la génération, réinitialisation de l'état isGenerating");
       setIsGenerating(false);
     }

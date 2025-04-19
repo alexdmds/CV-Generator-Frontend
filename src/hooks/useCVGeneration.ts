@@ -22,12 +22,12 @@ export function useCVGeneration() {
     retryCheckForExistingCV
   } = useCVExistenceCheck(setPdfUrl);
 
-  // Use the CV generation process hook with the refreshPdfDisplay function
+  // Use the CV generation process hook - remove the argument from here
   const {
     isGenerating,
     progress,
     generateCV
-  } = useCVGenerationProcess(refreshPdfDisplay);
+  } = useCVGenerationProcess();
 
   return {
     // PDF URL management
